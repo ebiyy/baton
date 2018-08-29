@@ -2,6 +2,7 @@ import firebase from 'firebase';
 import { createStackNavigator } from 'react-navigation';
 import ENV from './env.json';
 import TodayTasksScreen from './src/screens/TodayTasksScreen';
+import DashboardScreen from './src/screens/DashboardScreen';
 
 const config = {
   apiKey: ENV.FIREBASE_API_KEY,
@@ -16,8 +17,8 @@ firebase.initializeApp(config);
 const App = createStackNavigator(
   {
     // Login: { screen: LoginScreen },
-    TodayTasks: { screen: TodayTasksScreen },
-    Dashboard: { screen: DashboardScreen }
+    // TodayTasks: { screen: TodayTasksScreen }
+    Dashboard: { screen: DashboardScreen }
     // Signup: { screen: SignupScreen },
     // Home: { screen: MemoListScreen },
     // MemoDetail: { screen: MemoDetailScreen },
