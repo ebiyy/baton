@@ -1,27 +1,46 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import firebase from 'firebase';
+import { createStackNavigator } from 'react-navigation';
+import ENV from './env.json';
+import TodayTasksScreen from './src/screens/TodayTasksScreen';
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center'
+const config = {
+  apiKey: ENV.FIREBASE_API_KEY,
+  authDomain: ENV.FIREBASE_AUTH_DOMAIN,
+  databaseURL: ENV.FIREBASE_DB_URL,
+  projectId: ENV.FIREBASE_PRJ_ID,
+  storageBucket: ENV.FIREBASE_STORAGE,
+  messagingSenderId: ENV.FIREBASE_SENDER_ID
+};
+firebase.initializeApp(config);
+
+const App = createStackNavigator(
+  {
+    // Login: { screen: LoginScreen },
+    TodayTasks: { screen: TodayTasksScreen },
+    Dashboard: { screen: DashboardScreen }
+    // Signup: { screen: SignupScreen },
+    // Home: { screen: MemoListScreen },
+    // MemoDetail: { screen: MemoDetailScreen },
+    // MemoEdit: { screen: MemoEditScreen },
+    // MemoCreate: { screen: MemoCreateScreen }
+  },
+  {
+    navigationOptions: {
+      headerTitle: 'Quail',
+      headerTintColor: '#fff',
+      headerBackTitle: null,
+      headerStyle: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+        backgroundColor: '#265366'
+      },
+      headerTitleStyle: {
+        color: '#fff'
+      }
+    }
   }
-});
+);
 
-export default class App extends React.Component {
-  state = {
-    email: ''
-  };
-
-  render() {
-    return (
-      <View style={styles.container}>
-        <Text>{this.state.email}</Text>
-        <Text>Changes you make will automatically reload.</Text>
-        <Text>Shake your phone to open the developer menu.</Text>
-      </View>
-    );
-  }
-}
+export default App;
