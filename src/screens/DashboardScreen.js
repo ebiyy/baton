@@ -1,5 +1,17 @@
 import React from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Dimensions,
+  Alert,
+  Linking
+} from 'react-native';
+import Modal from 'react-native-modal';
+import { Card } from 'react-native-elements';
+import { createStackNavigator } from 'react-navigation';
 
 const styles = StyleSheet.create({
   container: {
@@ -8,28 +20,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
-    padding: 24,
     backgroundColor: '#fff'
   },
   inputBox: {
-    width: '80%',
-    borderColor: 'darkgreen',
-    borderWidth: 1.5,
-    borderRadius: 5,
+    width: '100%',
+    backgroundColor: '#40826D',
     paddingVertical: 15,
     paddingHorizontal: 5,
-    marginBottom: 10
+    marginBottom: 10,
+    paddingLeft: 15
   },
   inputText: {
-    fontSize: 18
-  },
-  button: {
-    margin: 30,
-    marginBottom: 10,
-    width: 150,
-    alignItems: 'center',
-    backgroundColor: '#2196F3',
-    borderRadius: 50
+    fontSize: 18,
+    color: 'white'
   },
   buttonText: {
     padding: 20,
@@ -38,8 +41,8 @@ const styles = StyleSheet.create({
   },
   mainBox: {
     marginBottom: 20,
-    backgroundColor: '#f2f2b0',
-    padding: 50,
+    backgroundColor: '#fff0005c',
+    padding: 35,
     borderRadius: 40
   },
   mainBoxStart: {
@@ -50,13 +53,40 @@ const styles = StyleSheet.create({
   mainText: {
     fontSize: 100,
     color: 'orange',
-    textShadowColor: '#ddd',
+    textShadowColor: 'pink',
     textShadowOffset: { width: 1, height: 4 },
-    textShadowRadius: 8
+    textShadowRadius: 3
   },
   mainTextStart: {
     fontSize: 100,
     color: 'white'
+  },
+  button: {
+    margin: 30,
+    marginBottom: 10,
+    width: 150,
+    borderRadius: 50
+  },
+  button: {
+    backgroundColor: 'lightblue',
+    padding: 12,
+    margin: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 4,
+    borderColor: 'rgba(0, 0, 0, 0.1)'
+  },
+  modalContent: {
+    backgroundColor: 'lightblue',
+    paddingBottom: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 4,
+    borderColor: 'rgba(0, 0, 0, 0.1)'
+  },
+  bottomModal: {
+    justifyContent: 'flex-end',
+    margin: 0
   }
 });
 
@@ -64,7 +94,8 @@ class DashboardScreen extends React.Component {
   state = {
     email: '',
     password: '',
-    isLoading: true
+    isLoading: true,
+    visibleModal: null
   };
 
   onPressButton() {
@@ -72,56 +103,81 @@ class DashboardScreen extends React.Component {
     // this とかの処理を入れないとエラーになるので登録ボタンにする
   }
 
+  renderButton = (text, onPress) => (
+    <TouchableOpacity onPress={onPress}>
+      <View style={styles.button}>
+        <Text>{text}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  renderModalContent = () => (
+    <View style={styles.modalContent}>
+      <Card title="Sponsored Link">
+        <Text>目標達成サポート商品</Text>
+        <Text>PotencialSecret~潜在意識活用マニュアル~は必要ですか？</Text>
+        <Text>やる気が出ないのは潜在意識が邪魔しているせいかも・・・</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
+          {this.renderButton('必要ない', () => {
+            this.setState({ visibleModal: null });
+            this.props.navigation.navigate('TodayTasks');
+          })}
+          {this.renderButton('必要かも', () => {
+            this.setState({ visibleModal: null });
+            Linking.openURL('https://www.infotop.jp/click.php?aid=364862&iid=50540');
+          })}
+        </View>
+      </Card>
+    </View>
+  );
+
   render() {
+    const { height, width } = Dimensions.get('window');
     return (
       <View style={styles.container}>
-        <View style={styles.mainBox}>
+        {/* <View style={styles.mainBox}>
           <View>
-            <Text style={styles.mainText}>10日</Text>
-            <Text style={{ fontSize: 40, alignSelf: 'center' }}>継続中</Text>
+            <Text style={[styles.mainText, { fontSize: width / 3.8 }]}>10日</Text>
+            <Text style={{ fontSize: 20, alignSelf: 'center' }}>連続継続中</Text>
           </View>
         </View>
         <View style={styles.inputBox}>
-          <TextInput
-            style={styles.inputText}
-            placeholder="１５文字以内で入力してください"
-            //   onChangeText={text => this.setState({ text })}
-            editable
-            maxLength={15}
-            underlineColorAndroid="#fff"
-          />
+          <TouchableOpacity onPress={this.onPressButton}>
+            <Text style={styles.inputText}>声を少し張って訊き返されない！</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.inputBox}>
-          <TextInput
-            style={styles.inputText}
-            placeholder="１５文字以内で入力してください"
-            //   onChangeText={text => this.setState({ text })}
-            editable
-            maxLength={15}
-            underlineColorAndroid="#fff"
-          />
+          <TouchableOpacity onPress={this.onPressButton}>
+            <Text style={styles.inputText}>感覚的に話さない！</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.inputBox}>
-          <TextInput
-            style={styles.inputText}
-            placeholder="１５文字以内で入力してください"
-            //   onChangeText={text => this.setState({ text })}
-            editable
-            maxLength={15}
-            underlineColorAndroid="#fff"
-          />
-        </View>
-        {/* <View style={styles.mainBoxStart}>
+          <TouchableOpacity onPress={this.onPressButton}>
+            <Text style={styles.inputText}>ついつい食べ過ぎない！</Text>
+          </TouchableOpacity>
+        </View> */}
+
+        <View style={styles.mainBoxStart}>
           <View>
             <Text style={styles.mainTextStart}>0日</Text>
             <Text style={{ fontSize: 40, alignSelf: 'center' }}>継続中</Text>
           </View>
-        </View> */}
-        {/* <TouchableOpacity onPress={this.onPressButton}>
+        </View>
+        <TouchableOpacity onPress={() => this.setState({ visibleModal: 2 })}>
           <View style={styles.button}>
             <Text style={styles.buttonText}>開始</Text>
           </View>
-        </TouchableOpacity> */}
+        </TouchableOpacity>
+
+        {/* {this.renderButton('開始', () => this.setState({ visibleModal: 2 }))} */}
+        <Modal
+          isVisible={this.state.visibleModal === 2}
+          animationIn="slideInLeft"
+          animationOut="slideOutRight"
+          onBackdropPress={() => this.setState({ visibleModal: false })}
+        >
+          {this.renderModalContent()}
+        </Modal>
       </View>
     );
   }
