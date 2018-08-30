@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { createStackNavigator } from 'react-navigation';
 
 const styles = StyleSheet.create({
   container: {
@@ -21,29 +22,42 @@ const styles = StyleSheet.create({
   },
   button: {
     marginBottom: 10,
-    width: '100%',
+    width: '50%',
+    height: 80,
+    alignSelf: 'center',
     alignItems: 'center',
     backgroundColor: '#2196F3'
   },
   buttonText: {
     padding: 5,
-    color: 'white'
+    color: 'white',
+    alignSelf: 'center'
+  },
+  button: {
+    backgroundColor: 'lightblue',
+    padding: 12,
+    margin: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 4,
+    borderColor: 'rgba(0, 0, 0, 0.1)'
+  },
+  buttonText: {
+    padding: 20,
+    color: 'white',
+    fontSize: 30
   }
 });
 
 class TodayTasksScreen extends React.Component {
-  //   state = {
-  //     email: 'い',
-  //     text: ''
-  //   };
-  constructor(props) {
-    super(props);
-    this.state = { text: '' };
-  }
+  state = {
+    text01: '',
+    text02: '',
+    text03: ''
+  };
 
   onPressButton() {
-    Alert.alert('You tapped the button!');
-    // this とかの処理を入れないとエラーになるので登録ボタンにする
+    this.props.navigation.goBack();
   }
 
   render() {
@@ -55,7 +69,9 @@ class TodayTasksScreen extends React.Component {
           <TextInput
             style={styles.inputText}
             placeholder="１５文字以内で入力してください"
-            //   onChangeText={text => this.setState({ text })}
+            onChangeText={text01 => {
+              this.setState({ text01 });
+            }}
             editable
             maxLength={15}
             underlineColorAndroid="#fff"
@@ -65,7 +81,9 @@ class TodayTasksScreen extends React.Component {
           <TextInput
             style={styles.inputText}
             placeholder="１５文字以内で入力してください"
-            //   onChangeText={text => this.setState({ text })}
+            onChangeText={text02 => {
+              this.setState({ text02 });
+            }}
             editable
             maxLength={15}
             underlineColorAndroid="#fff"
@@ -75,15 +93,17 @@ class TodayTasksScreen extends React.Component {
           <TextInput
             style={styles.inputText}
             placeholder="１５文字以内で入力してください"
-            //   onChangeText={text => this.setState({ text })}
+            onChangeText={text03 => {
+              this.setState({ text03 });
+            }}
             editable
             maxLength={15}
             underlineColorAndroid="#fff"
           />
         </View>
-        <TouchableOpacity onPress={this.onPressButton}>
+        <TouchableOpacity onPress={() => this.props.navigation.goBack()}>
           <View style={styles.button}>
-            <Text style={styles.buttonText}>OK</Text>
+            <Text style={styles.buttonText}>決定</Text>
           </View>
         </TouchableOpacity>
         {/* <Loading text="ログイン中" isLoading={this.state.isLoading} /> */}
