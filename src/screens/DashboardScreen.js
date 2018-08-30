@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import Modal from 'react-native-modal';
 import { Card } from 'react-native-elements';
-import { createStackNavigator } from 'react-navigation';
 
 const styles = StyleSheet.create({
   container: {
