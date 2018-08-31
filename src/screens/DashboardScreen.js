@@ -7,10 +7,13 @@ import {
   TouchableOpacity,
   Dimensions,
   Alert,
-  Linking
+  Linking,
+  AsyncStorage
 } from 'react-native';
+import Expo from 'expo';
 import Modal from 'react-native-modal';
 import { Card } from 'react-native-elements';
+import firebase from 'firebase';
 
 const styles = StyleSheet.create({
   container: {
@@ -96,6 +99,49 @@ class DashboardScreen extends React.Component {
     isLoading: true,
     visibleModal: null
   };
+
+  async componentDidMount() {
+    firebase
+      .auth()
+      .signInAnonymously()
+      .catch(error => {
+        // Handle Errors here.
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        Alert.alert('エラー');
+        // ...
+      });
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        // User is signed in.
+        const isAnonymous = user.isAnonymous;
+        const uid = user.uid;
+        const db = firebase.firestore();
+        db.settings({ timestampsInSnapshots: true });
+        db.enablePersistence()
+          .then(() => {
+            // Initialize Cloud Firestore through firebase
+          })
+          .catch(err => {
+            if (err.code === 'failed-precondition') {
+              // Multiple tabs open, persistence can only be enabled
+              // in one tab at a a time.
+              // ...
+            } else if (err.code === 'unimplemented') {
+              // The current browser does not support all of the
+              // features required to enable persistence
+              // ...
+            }
+          });
+
+        // ...
+      } else {
+        // User is signed out.
+        // ...
+      }
+      // ...
+    });
+  }
 
   onPressButton() {
     Alert.alert('You tapped the button!');
