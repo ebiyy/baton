@@ -3,6 +3,9 @@ import { createStackNavigator } from 'react-navigation';
 import ENV from './env.json';
 import TodayTasksScreen from './src/screens/TodayTasksScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
+import AsyncStorageScreen from './src/screens/AsyncStorage';
+
+require('firebase/firestore');
 
 const config = {
   apiKey: ENV.FIREBASE_API_KEY,
@@ -17,8 +20,10 @@ firebase.initializeApp(config);
 const App = createStackNavigator(
   {
     // Login: { screen: LoginScreen },
+    Storage: { screen: AsyncStorageScreen },
     Dashboard: { screen: DashboardScreen },
     TodayTasks: { screen: TodayTasksScreen }
+
     // Signup: { screen: SignupScreen },
     // Home: { screen: MemoListScreen },
     // MemoDetail: { screen: MemoDetailScreen },
