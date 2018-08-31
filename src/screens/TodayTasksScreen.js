@@ -1,6 +1,5 @@
 import React from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
-import { createStackNavigator } from 'react-navigation';
 
 const styles = StyleSheet.create({
   container: {
@@ -107,13 +106,6 @@ class TodayTasksScreen extends React.Component {
           </View>
         </TouchableOpacity>
         {/* <Loading text="ログイン中" isLoading={this.state.isLoading} /> */}
-        <Text style={styles.title}>{email}</Text>
-        <Text style={{ padding: 10, fontSize: 42 }}>
-          {this.state.text
-            .split(' ')
-            .map(word => word && '🍕')
-            .join(' ')}
-        </Text>
       </View>
     );
   }
