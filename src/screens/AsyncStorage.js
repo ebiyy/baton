@@ -31,16 +31,40 @@ const styles = StyleSheet.create({
   }
 });
 
+const storageName = '@baton:';
+
 /**
  * AsyncStorageの指定のキーに値を保存する
  * @param {*} key キー
  * @param {*} value 保存する値
  */
-async function saveKey(key, value) {
+export async function saveKey(key, value) {
   try {
-    await AsyncStorage.setItem(key, value);
+    await AsyncStorage.setItem(storageName + key, value);
   } catch (error) {
     console.log(`Error saving data${error}`);
+  }
+  // Alert.alert(storageName + key, value);
+}
+
+/**
+ * AsyncStorageに指定のキーに格納されているデータを取得する
+ * @param {*} key AsyncStorageのキー
+ */
+export async function getKey(key) {
+  return AsyncStorage.getItem(storageName + key);
+}
+
+/**
+ * AsyncStorageの指定のキーに値を削除する
+ * @param {*} key キー
+ */
+export async function resetKey(key) {
+  try {
+    await AsyncStorage.removeItem(storageName + key);
+    this.getKey(key);
+  } catch (error) {
+    console.log(`Error resetting data${error}`);
   }
 }
 

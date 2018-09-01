@@ -1,5 +1,15 @@
 import React from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  AsyncStorage
+} from 'react-native';
+import update from 'immutability-helper';
+import { saveKey, getKey } from './AsyncStorage';
 
 const styles = StyleSheet.create({
   container: {
@@ -50,13 +60,24 @@ const styles = StyleSheet.create({
 
 class TodayTasksScreen extends React.Component {
   state = {
-    text01: '',
-    text02: '',
-    text03: ''
+    todayTitle: {
+      todayFirst: '',
+      todaySecond: '',
+      todayThird: ''
+    }
   };
 
   onPressButton() {
     this.props.navigation.goBack();
+  }
+
+  async saveItem(key, value) {
+    const { todayTitle } = this.state;
+    todayTitle[key] = value;
+    this.setState({
+      todayTitle
+    });
+    await AsyncStorage.setItem('todayTitle', JSON.stringify(todayTitle));
   }
 
   render() {
@@ -68,9 +89,16 @@ class TodayTasksScreen extends React.Component {
           <TextInput
             style={styles.inputText}
             placeholder="１５文字以内で入力してください"
-            onChangeText={text01 => {
-              this.setState({ text01 });
-            }}
+            onChangeText={value => this.saveItem('todayFirst', value)}
+            editable
+            maxLength={15}
+            underlineColorAndroid="#fff"
+          />
+        </View>
+        <View style={styles.inputBox}>
+          <TextInput
+            style={styles.inputText}
+            onChangeText={value => this.saveItem('todaySecond', value)}
             editable
             maxLength={15}
             underlineColorAndroid="#fff"
@@ -80,27 +108,17 @@ class TodayTasksScreen extends React.Component {
           <TextInput
             style={styles.inputText}
             placeholder="１５文字以内で入力してください"
-            onChangeText={text02 => {
-              this.setState({ text02 });
-            }}
+            onChangeText={value => this.saveItem('todayThird', value)}
             editable
             maxLength={15}
             underlineColorAndroid="#fff"
           />
         </View>
-        <View style={styles.inputBox}>
-          <TextInput
-            style={styles.inputText}
-            placeholder="１５文字以内で入力してください"
-            onChangeText={text03 => {
-              this.setState({ text03 });
-            }}
-            editable
-            maxLength={15}
-            underlineColorAndroid="#fff"
-          />
-        </View>
-        <TouchableOpacity onPress={() => this.props.navigation.goBack()}>
+        <TouchableOpacity
+          onPress={() => {
+            this.props.navigation.goBack();
+          }}
+        >
           <View style={styles.button}>
             <Text style={styles.buttonText}>決定</Text>
           </View>
