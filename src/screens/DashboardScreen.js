@@ -92,55 +92,61 @@ const styles = StyleSheet.create({
   }
 });
 
-class DashboardScreen extends React.Component {
-  state = {
-    email: '',
-    password: '',
-    isLoading: true,
-    visibleModal: null
-  };
-
-  async componentDidMount() {
-    firebase
-      .auth()
-      .signInAnonymously()
-      .catch(error => {
-        // Handle Errors here.
-        const errorCode = error.code;
-        const errorMessage = error.message;
-        Alert.alert('エラー');
-        // ...
-      });
-    firebase.auth().onAuthStateChanged(user => {
-      if (user) {
-        // User is signed in.
-        const isAnonymous = user.isAnonymous;
-        const uid = user.uid;
-        const db = firebase.firestore();
-        db.settings({ timestampsInSnapshots: true });
-        db.enablePersistence()
-          .then(() => {
-            // Initialize Cloud Firestore through firebase
-          })
-          .catch(err => {
-            if (err.code === 'failed-precondition') {
-              // Multiple tabs open, persistence can only be enabled
-              // in one tab at a a time.
-              // ...
-            } else if (err.code === 'unimplemented') {
-              // The current browser does not support all of the
-              // features required to enable persistence
-              // ...
-            }
-          });
-
-        // ...
-      } else {
-        // User is signed out.
-        // ...
-      }
+async function firebaseAuth() {
+  firebase
+    .auth()
+    .signInAnonymously()
+    .catch(error => {
+      // Handle Errors here.
+      const errorCode = error.code;
+      const errorMessage = error.message;
+      Alert.alert('エラー');
       // ...
     });
+  firebase.auth().onAuthStateChanged(user => {
+    if (user) {
+      // User is signed in.
+      const isAnonymous = user.isAnonymous;
+      const uid = user.uid;
+      const db = firebase.firestore();
+      db.settings({ timestampsInSnapshots: true });
+
+      // ...
+    } else {
+      // User is signed out.
+      // ...
+    }
+    // ...
+  });
+}
+
+/**
+ * AsyncStorage保存先キー
+ */
+const AS_KEY = {
+  // 今日の目標
+  TODAY_TITLE: 'todayTitle',
+  // 今日の各目標
+  TITLE: ['todayFirst', 'todaySecond', 'todayThird']
+};
+
+class DashboardScreen extends React.Component {
+  constructor() {
+    super();
+    // androidのタイマー不具合非表示（対策がないため）
+    console.ignoredYellowBox = ['Setting a timer'];
+  }
+
+  state = {
+    isTodayData: false,
+    isGetData: false,
+    isLoading: true,
+    visibleModal: null,
+    todayTitle: {}
+  };
+
+  componentDidMount() {
+    firebaseAuth();
   }
 
   onPressButton() {
@@ -148,14 +154,31 @@ class DashboardScreen extends React.Component {
     // this とかの処理を入れないとエラーになるので登録ボタンにする
   }
 
-  renderButton = (text, onPress) => (
-    <TouchableOpacity onPress={onPress}>
-      <View style={styles.button}>
-        <Text>{text}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  /**
+   *今日の目標をAsyncStorageから取得
+   *
+   * @memberof DashboardScreen
+   */
+  setTodayTitle() {
+    AsyncStorage.getItem(AS_KEY.TODAY_TITLE).then(value => {
+      this.setState({
+        isGetData: true
+      });
+      if (value) {
+        const todayTitle = JSON.parse(value);
+        this.setState({
+          isTodayData: true,
+          todayTitle
+        });
+      }
+    });
+  }
 
+  /**
+   *モーダルコンテンツ
+   *
+   * @memberof DashboardScreen
+   */
   renderModalContent = () => (
     <View style={styles.modalContent}>
       <Card title="Sponsored Link">
@@ -164,8 +187,9 @@ class DashboardScreen extends React.Component {
         <Text>やる気が出ないのは潜在意識が邪魔しているせいかも・・・</Text>
         <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
           {this.renderButton('必要ない', () => {
+            const { navigation } = this.props;
             this.setState({ visibleModal: null });
-            this.props.navigation.navigate('TodayTasks');
+            navigation.navigate('TodayTasks');
           })}
           {this.renderButton('必要かも', () => {
             this.setState({ visibleModal: null });
@@ -176,47 +200,91 @@ class DashboardScreen extends React.Component {
     </View>
   );
 
+  /**
+   *モーダルフッターボタンエレメント
+   *
+   * @memberof DashboardScreen
+   */
+  renderButton = (text, onPress) => (
+    <TouchableOpacity onPress={onPress}>
+      <View style={styles.button}>
+        <Text>{text}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  /**
+   * 各目標表示
+   *
+   * @param {*} title 各目標
+   * @returns 各目標表示エレメント
+   * @memberof DashboardScreen
+   */
+  todayTitleGenerator(title) {
+    return (
+      <View style={styles.inputBox}>
+        <TouchableOpacity onPress={this.onPressButton}>
+          <Text style={styles.inputText}>{title}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  /**
+   * 目標出力コンテンツ
+   *
+   * @returns 目標コンテンツ
+   * @memberof DashboardScreen
+   */
+  renderTodayTitleContent() {
+    const { todayTitle } = this.state;
+    const { TITLE } = AS_KEY;
+    return (
+      <View style={{ width: '100%' }}>
+        {this.todayTitleGenerator(todayTitle[TITLE[0]])}
+        {this.todayTitleGenerator(todayTitle[TITLE[1]])}
+        {this.todayTitleGenerator(todayTitle[TITLE[2]])}
+      </View>
+    );
+  }
+
   render() {
     const { height, width } = Dimensions.get('window');
+    const { isTodayData, visibleModal, isGetData } = this.state;
+    // AsyncStorageから今日の目標を取得、取得後にisGetDataはfalseになる
+    if (!isGetData) {
+      this.setTodayTitle();
+    }
+    // 今日の目標、取得フラグ
+    // true: 目標表示、 false: 目標設定表示
+    if (isTodayData) {
+      return (
+        <View style={styles.container}>
+          <View style={styles.mainBox}>
+            <View>
+              <Text style={[styles.mainText, { fontSize: width / 3.8 }]}>10日</Text>
+              <Text style={{ fontSize: 20, alignSelf: 'center' }}>連続継続中</Text>
+            </View>
+          </View>
+          {this.renderTodayTitleContent()}
+        </View>
+      );
+    }
     return (
       <View style={styles.container}>
-        {/* <View style={styles.mainBox}>
-          <View>
-            <Text style={[styles.mainText, { fontSize: width / 3.8 }]}>10日</Text>
-            <Text style={{ fontSize: 20, alignSelf: 'center' }}>連続継続中</Text>
-          </View>
-        </View>
-        <View style={styles.inputBox}>
-          <TouchableOpacity onPress={this.onPressButton}>
-            <Text style={styles.inputText}>声を少し張って訊き返されない！</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.inputBox}>
-          <TouchableOpacity onPress={this.onPressButton}>
-            <Text style={styles.inputText}>感覚的に話さない！</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.inputBox}>
-          <TouchableOpacity onPress={this.onPressButton}>
-            <Text style={styles.inputText}>ついつい食べ過ぎない！</Text>
-          </TouchableOpacity>
-        </View> */}
-
         <View style={styles.mainBoxStart}>
           <View>
             <Text style={styles.mainTextStart}>0日</Text>
             <Text style={{ fontSize: 40, alignSelf: 'center' }}>継続中</Text>
           </View>
         </View>
-        <TouchableOpacity onPress={() => this.setState({ visibleModal: 2 })}>
+        <TouchableOpacity onPress={() => this.setState({ visibleModal: true })}>
           <View style={styles.button}>
             <Text style={styles.buttonText}>開始</Text>
           </View>
         </TouchableOpacity>
-
-        {/* {this.renderButton('開始', () => this.setState({ visibleModal: 2 }))} */}
         <Modal
-          isVisible={this.state.visibleModal === 2}
+          isVisible={visibleModal === true}
           animationIn="slideInLeft"
           animationOut="slideOutRight"
           onBackdropPress={() => this.setState({ visibleModal: false })}
