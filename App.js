@@ -20,10 +20,10 @@ firebase.initializeApp(config);
 const App = createStackNavigator(
   {
     // Login: { screen: LoginScreen },
-    Storage: { screen: AsyncStorageScreen },
-    Dashboard: { screen: DashboardScreen },
-    TodayTasks: { screen: TodayTasksScreen }
 
+    Dashboard: { screen: DashboardScreen },
+    TodayTasks: { screen: TodayTasksScreen },
+    Storage: { screen: AsyncStorageScreen }
     // Signup: { screen: SignupScreen },
     // Home: { screen: MemoListScreen },
     // MemoDetail: { screen: MemoDetailScreen },
