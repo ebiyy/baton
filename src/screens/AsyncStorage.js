@@ -31,6 +31,19 @@ const styles = StyleSheet.create({
   }
 });
 
+/**
+ * AsyncStorageの指定のキーに値を保存する
+ * @param {*} key キー
+ * @param {*} value 保存する値
+ */
+async function saveKey(key, value) {
+  try {
+    await AsyncStorage.setItem(key, value);
+  } catch (error) {
+    console.log(`Error saving data${error}`);
+  }
+}
+
 class AsyncStorageScreen extends React.Component {
   constructor(props) {
     super(props);
@@ -39,65 +52,60 @@ class AsyncStorageScreen extends React.Component {
     };
   }
 
-  async getKey() {
+  /**
+   * AsyncStorageに指定のキーに格納されているデータを取得する
+   * @param {*} key AsyncStorageのキー
+   */
+  async getKey(key) {
     try {
-      const value = await AsyncStorage.getItem('@MySuperStore:key');
+      const value = await AsyncStorage.getItem(key);
+      Alert.alert(value);
       this.setState({ myKey: value });
     } catch (error) {
       console.log(`Error retrieving data${error}`);
     }
   }
 
-  async saveKey(value) {
+  /**
+   * AsyncStorageの指定のキーに値を削除する
+   * @param {*} key キー
+   */
+  async resetKey(key) {
     try {
-      await AsyncStorage.setItem('@MySuperStore:key', value);
-    } catch (error) {
-      console.log(`Error saving data${error}`);
-    }
-  }
-
-  async resetKey() {
-    try {
-      const value = await AsyncStorage.getItem('@MySuperStore:key');
-      Alert.alert(value);
-      this.setState({ myKey: value });
-      await AsyncStorage.removeItem('@MySuperStore:key');
+      await AsyncStorage.removeItem(key);
+      this.getKey(key);
     } catch (error) {
       console.log(`Error resetting data${error}`);
     }
   }
 
   render() {
+    const { myKey } = this.state;
+    const dispKeyValue = `Stored key is =${myKey}`;
     return (
       <View style={styles.container}>
         <Text style={styles.welcome}>Welcome to Demo AsyncStorage!</Text>
-
         <TextInput
           style={styles.formInput}
           placeholder="Enter key you want to save!"
-          defaultValue={this.state.myKey}
-          onChangeText={value => this.saveKey(value)}
+          defaultValue={myKey}
+          onChangeText={value => saveKey('@MySuperStore:key', value)}
         />
-
         <Button
           style={styles.formButton}
-          onPress={this.getKey.bind(this)}
+          onPress={() => this.getKey('@MySuperStore:key')}
           title="Get Key"
           color="#2196f3"
           accessibilityLabel="Get Key"
         />
-
         <Button
           style={styles.formButton}
-          onPress={this.resetKey.bind(this)}
+          onPress={() => this.resetKey('@MySuperStore:key')}
           title="Reset"
           color="#f44336"
           accessibilityLabel="Reset"
         />
-
-        <Text style={styles.instructions}>Stored key is =
-{this.state.myKey}
-</Text>
+        <Text style={styles.instructions}>{dispKeyValue}</Text>
       </View>
     );
   }
