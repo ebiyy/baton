@@ -15,6 +15,8 @@ import Modal from 'react-native-modal';
 import { Card } from 'react-native-elements';
 import firebase from 'firebase';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import format from 'date-fns/format';
+import ja from 'date-fns/locale/ja';
 
 const styles = StyleSheet.create({
   container: {
@@ -57,7 +59,7 @@ const styles = StyleSheet.create({
     fontSize: 100,
     color: 'orange',
     textShadowColor: 'pink',
-    textShadowOffset: { width: 1, height: 4 },
+    textShadowOffset: { width: 3, height: 4 },
     textShadowRadius: 3
   },
   mainTextStart: {
@@ -146,17 +148,34 @@ class DashboardScreen extends React.Component {
     isTodayData: false,
     isGetData: false,
     isLoading: true,
-    visibleModal: null,
-    todayTitle: {},
+    visibleModal: false,
+    todayTitle: {
+      [AS_KEY.TITLE[0]]: '',
+      [AS_KEY.TITLE[1]]: '',
+      [AS_KEY.TITLE[2]]: ''
+    },
     complete: {
       [AS_KEY.TITLE[0]]: false,
       [AS_KEY.TITLE[1]]: false,
       [AS_KEY.TITLE[2]]: false
+    },
+    ongoing: {
+      date: 0,
+      saveDate: ''
+    },
+    limitHour: {
+      night: 18,
+      deep: 3
     }
   };
 
+  /**
+   * 画面が描画前に実行
+   * 描画は全て処理が終わったからになるのでローディング設定がいる
+   */
   componentDidMount() {
     firebaseAuth();
+    this.setOngoing();
   }
 
   /**
@@ -171,6 +190,27 @@ class DashboardScreen extends React.Component {
   }
 
   /**
+   * 継続日数をAsyncStorageから取得
+   * 最後の目標達成日から1.5日過ぎてればリセット
+   */
+  setOngoing() {
+    AsyncStorage.getItem('ongoing').then(value => {
+      if (value) {
+        const ongoing = JSON.parse(value);
+        const saveDate = new Date(ongoing.saveDate);
+        const nowDate = new Date();
+        const df = nowDate - saveDate;
+        if (df / 1000 / 60 / 60 / 24 > 1.5) {
+          ongoing.date = 0;
+        }
+        this.setState({
+          ongoing
+        });
+      }
+    });
+  }
+
+  /**
    *今日の目標をAsyncStorageから取得
    *
    * @memberof DashboardScreen
@@ -178,12 +218,13 @@ class DashboardScreen extends React.Component {
   setTodayTitle() {
     // for debug
     // AsyncStorage.removeItem(AS_KEY.TODAY_TITLE);
+    // AsyncStorage.clear();
     AsyncStorage.getItem(AS_KEY.TODAY_TITLE).then(value => {
       this.setState({
         isGetData: true
       });
       if (value) {
-        const todayTitle = JSON.parse(value);
+        const { todayTitle } = JSON.parse(value);
         this.setState({
           isTodayData: true,
           todayTitle
@@ -223,7 +264,7 @@ class DashboardScreen extends React.Component {
           })}
           {this.renderButton('必要かも', () => {
             this.setState({ visibleModal: null });
-            Linking.openURL(LINK.GOOD);
+            Linking.openURL(***REMOVED***);
           })}
         </View>
       </Card>
@@ -286,6 +327,25 @@ class DashboardScreen extends React.Component {
   }
 
   /**
+   * 今日の達成をAsyncStorageに保存する
+   */
+  todaySummary() {
+    const { complete, ongoing } = this.state;
+    let isBaton = false;
+    Object.keys(complete).forEach(key => {
+      if (complete[key]) {
+        isBaton = true;
+      }
+    });
+    if (isBaton) {
+      ongoing.date += 1;
+      ongoing.saveDate = new Date().toLocaleString();
+      this.setState({ ongoing });
+      AsyncStorage.setItem('ongoing', JSON.stringify(ongoing));
+    }
+  }
+
+  /**
    * 目標出力コンテンツ
    *
    * @returns 目標コンテンツ
@@ -301,9 +361,37 @@ class DashboardScreen extends React.Component {
     );
   }
 
+  /**
+   * 明日の目標設定ボタン表示非表示切り替えメソッド
+   */
+  renderNextTitleContent() {
+    const { limitHour } = this.state;
+    const now = format(new Date(), 'HH');
+    if (now >= limitHour.night || now <= limitHour.deep) {
+      return (
+        <View style={{ alignSelf: 'flex-end' }}>
+          {this.renderButton('明日の目標も設定', () => {
+            this.todaySummary();
+            const { navigation } = this.props;
+            // todo
+            // コンプリート初期化、入力があったらこのボタンを非表示に
+            //  明日にならないと目標をあまり見えないように、タップもできない
+            // その日は達成したことがわかるように
+            //  履歴を見れるようにこれはfirebase
+            // tapで達成したらバトンを表示左寄せ
+            navigation.navigate('TodayTasks', {
+              updateState: (key, value) => this.updateState(key, value)
+            });
+          })}
+        </View>
+      );
+    }
+    return null;
+  }
+
   render() {
     const { height, width } = Dimensions.get('window');
-    const { isTodayData, visibleModal, isGetData } = this.state;
+    const { isTodayData, visibleModal, isGetData, ongoing } = this.state;
     // AsyncStorageから今日の目標を取得、取得後にisGetDataはfalseになる
     if (!isGetData) {
       this.setTodayTitle();
@@ -311,11 +399,13 @@ class DashboardScreen extends React.Component {
     // 今日の目標、取得フラグ
     // true: 目標表示、 false: 目標設定表示
     if (isTodayData) {
+      const ongoingDate = `${ongoing.date}日`;
       return (
         <View style={styles.container}>
+          {this.renderNextTitleContent()}
           <View style={styles.mainBox}>
             <View>
-              <Text style={[styles.mainText, { fontSize: width / 3.8 }]}>10日</Text>
+              <Text style={[styles.mainText, { fontSize: width / 3.8 }]}>{ongoingDate}</Text>
               <Text style={{ fontSize: 20, alignSelf: 'center' }}>連続継続中</Text>
             </View>
           </View>
@@ -331,7 +421,11 @@ class DashboardScreen extends React.Component {
             <Text style={{ fontSize: 40, alignSelf: 'center' }}>継続中</Text>
           </View>
         </View>
-        <TouchableOpacity onPress={() => this.setState({ visibleModal: true })}>
+        <TouchableOpacity
+          onPress={() => {
+            this.updateState('visibleModal', true);
+          }}
+        >
           <View style={styles.button}>
             <Text style={styles.buttonText}>開始</Text>
           </View>
