@@ -32,7 +32,7 @@ const App = createStackNavigator(
   },
   {
     navigationOptions: {
-      headerTitle: 'Quail',
+      headerTitle: 'baton',
       headerTintColor: '#fff',
       headerBackTitle: null,
       headerStyle: {

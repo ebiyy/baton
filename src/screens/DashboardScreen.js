@@ -14,6 +14,7 @@ import Expo from 'expo';
 import Modal from 'react-native-modal';
 import { Card } from 'react-native-elements';
 import firebase from 'firebase';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const styles = StyleSheet.create({
   container: {
@@ -26,7 +27,7 @@ const styles = StyleSheet.create({
   },
   inputBox: {
     width: '100%',
-    backgroundColor: '#40826D',
+    backgroundColor: '#265366',
     paddingVertical: 15,
     paddingHorizontal: 5,
     marginBottom: 10,
@@ -131,8 +132,12 @@ const AS_KEY = {
 };
 
 class DashboardScreen extends React.Component {
-  constructor() {
-    super();
+  static navigationOptions = () => ({
+    headerTitle: '今日の目標！'
+  });
+
+  constructor(props) {
+    super(props);
     // androidのタイマー不具合非表示（対策がないため）
     console.ignoredYellowBox = ['Setting a timer'];
   }
@@ -142,16 +147,27 @@ class DashboardScreen extends React.Component {
     isGetData: false,
     isLoading: true,
     visibleModal: null,
-    todayTitle: {}
+    todayTitle: {},
+    complete: {
+      [AS_KEY.TITLE[0]]: false,
+      [AS_KEY.TITLE[1]]: false,
+      [AS_KEY.TITLE[2]]: false
+    }
   };
 
   componentDidMount() {
     firebaseAuth();
   }
 
-  onPressButton() {
-    Alert.alert('You tapped the button!');
-    // this とかの処理を入れないとエラーになるので登録ボタンにする
+  /**
+   * 目標達成完了トグルメソッド
+   * @param {number} index 目標のインデックス
+   */
+  onPressButton(index) {
+    const { complete } = this.state;
+    const { TITLE } = AS_KEY;
+    complete[TITLE[index]] = !complete[TITLE[index]];
+    this.setState(complete);
   }
 
   /**
@@ -160,6 +176,8 @@ class DashboardScreen extends React.Component {
    * @memberof DashboardScreen
    */
   setTodayTitle() {
+    // for debug
+    // AsyncStorage.removeItem(AS_KEY.TODAY_TITLE);
     AsyncStorage.getItem(AS_KEY.TODAY_TITLE).then(value => {
       this.setState({
         isGetData: true
@@ -172,6 +190,16 @@ class DashboardScreen extends React.Component {
         });
       }
     });
+  }
+
+  /**
+   * stateを更新するメソッド
+   * ナビゲーションに渡して遷移先でここのstateを更新する
+   * @param {string} key stateのキー
+   * @param {any} value 格納する値
+   */
+  updateState(key, value) {
+    this.setState({ [key]: value });
   }
 
   /**
@@ -189,7 +217,9 @@ class DashboardScreen extends React.Component {
           {this.renderButton('必要ない', () => {
             const { navigation } = this.props;
             this.setState({ visibleModal: null });
-            navigation.navigate('TodayTasks');
+            navigation.navigate('TodayTasks', {
+              updateState: (key, value) => this.updateState(key, value)
+            });
           })}
           {this.renderButton('必要かも', () => {
             this.setState({ visibleModal: null });
@@ -220,14 +250,39 @@ class DashboardScreen extends React.Component {
    * @returns 各目標表示エレメント
    * @memberof DashboardScreen
    */
-  todayTitleGenerator(title) {
+  todayTitleGenerator(index) {
+    const { TITLE } = AS_KEY;
+    const { inputBox } = styles;
+    const { complete } = this.state;
+    let color = '#265366';
+    if (complete[TITLE[index]]) {
+      color = '#DDD';
+    }
     return (
-      <View style={styles.inputBox}>
-        <TouchableOpacity onPress={this.onPressButton}>
-          <Text style={styles.inputText}>{title}</Text>
+      <View style={[inputBox, { backgroundColor: color }]}>
+        <TouchableOpacity onPress={() => this.onPressButton(index)}>
+          {this.toggleCheakMark(TITLE[index])}
         </TouchableOpacity>
       </View>
     );
+  }
+
+  /**
+   * 完了マークをプッシュ判定し、目標エレメント作成
+   * @param {string} key completeのキー
+   */
+  toggleCheakMark(key) {
+    const { todayTitle, complete } = this.state;
+    if (complete[key]) {
+      return (
+        <Text style={styles.inputText}>
+          <Icon name="check-circle" size={25} color="#265366" />
+          &nbsp;&nbsp;
+          {todayTitle[key]}
+        </Text>
+      );
+    }
+    return <Text style={styles.inputText}>{todayTitle[key]}</Text>;
   }
 
   /**
@@ -237,13 +292,11 @@ class DashboardScreen extends React.Component {
    * @memberof DashboardScreen
    */
   renderTodayTitleContent() {
-    const { todayTitle } = this.state;
-    const { TITLE } = AS_KEY;
     return (
       <View style={{ width: '100%' }}>
-        {this.todayTitleGenerator(todayTitle[TITLE[0]])}
-        {this.todayTitleGenerator(todayTitle[TITLE[1]])}
-        {this.todayTitleGenerator(todayTitle[TITLE[2]])}
+        {this.todayTitleGenerator(0)}
+        {this.todayTitleGenerator(1)}
+        {this.todayTitleGenerator(2)}
       </View>
     );
   }

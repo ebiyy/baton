@@ -6,7 +6,9 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
-  AsyncStorage
+  AsyncStorage,
+  KeyboardAvoidingView,
+  ScrollView
 } from 'react-native';
 import update from 'immutability-helper';
 import { saveKey, getKey } from './AsyncStorage';
@@ -59,6 +61,10 @@ const styles = StyleSheet.create({
 });
 
 class TodayTasksScreen extends React.Component {
+  static navigationOptions = () => ({
+    headerTitle: '目標を入力！'
+  });
+
   state = {
     todayTitle: {
       todayFirst: '',
@@ -68,7 +74,9 @@ class TodayTasksScreen extends React.Component {
   };
 
   onPressButton() {
-    this.props.navigation.goBack();
+    const { navigation } = this.props;
+    navigation.state.params.updateState('isGetData', false);
+    navigation.goBack();
   }
 
   async saveItem(key, value) {
@@ -83,48 +91,51 @@ class TodayTasksScreen extends React.Component {
   render() {
     const { email } = this.state;
     return (
-      <View style={styles.container}>
-        {/* <View style={{ borderWidth: 1, borderColor: 'red' }}> */}
-        <View style={styles.inputBox}>
-          <TextInput
-            style={styles.inputText}
-            placeholder="１５文字以内で入力してください"
-            onChangeText={value => this.saveItem('todayFirst', value)}
-            editable
-            maxLength={15}
-            underlineColorAndroid="#fff"
-          />
-        </View>
-        <View style={styles.inputBox}>
-          <TextInput
-            style={styles.inputText}
-            onChangeText={value => this.saveItem('todaySecond', value)}
-            editable
-            maxLength={15}
-            underlineColorAndroid="#fff"
-          />
-        </View>
-        <View style={styles.inputBox}>
-          <TextInput
-            style={styles.inputText}
-            placeholder="１５文字以内で入力してください"
-            onChangeText={value => this.saveItem('todayThird', value)}
-            editable
-            maxLength={15}
-            underlineColorAndroid="#fff"
-          />
-        </View>
-        <TouchableOpacity
-          onPress={() => {
-            this.props.navigation.goBack();
-          }}
-        >
-          <View style={styles.button}>
-            <Text style={styles.buttonText}>決定</Text>
+      <ScrollView>
+        <View style={styles.container} behavior="padding" enabled>
+          {/* <View style={{ borderWidth: 1, borderColor: 'red' }}> */}
+          <View style={styles.inputBox}>
+            <TextInput
+              style={styles.inputText}
+              placeholder="１５文字以内で入力してください"
+              onChangeText={value => this.saveItem('todayFirst', value)}
+              editable
+              maxLength={15}
+              underlineColorAndroid="#fff"
+            />
           </View>
-        </TouchableOpacity>
-        {/* <Loading text="ログイン中" isLoading={this.state.isLoading} /> */}
-      </View>
+          <View style={styles.inputBox}>
+            <TextInput
+              style={styles.inputText}
+              placeholder="１５文字以内で入力してください"
+              onChangeText={value => this.saveItem('todaySecond', value)}
+              editable
+              maxLength={15}
+              underlineColorAndroid="#fff"
+            />
+          </View>
+          <View style={styles.inputBox}>
+            <TextInput
+              style={styles.inputText}
+              placeholder="１５文字以内で入力してください"
+              onChangeText={value => this.saveItem('todayThird', value)}
+              editable
+              maxLength={15}
+              underlineColorAndroid="#fff"
+            />
+          </View>
+          <TouchableOpacity
+            onPress={() => {
+              this.onPressButton();
+            }}
+          >
+            <View style={styles.button}>
+              <Text style={styles.buttonText}>決定</Text>
+            </View>
+          </TouchableOpacity>
+          {/* <Loading text="ログイン中" isLoading={this.state.isLoading} /> */}
+        </View>
+      </ScrollView>
     );
   }
 }
