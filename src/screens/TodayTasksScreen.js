@@ -11,7 +11,8 @@ import {
   ScrollView
 } from 'react-native';
 import update from 'immutability-helper';
-import { saveKey, getKey } from './AsyncStorage';
+import format from 'date-fns/format';
+import ja from 'date-fns/locale/ja';
 
 const styles = StyleSheet.create({
   container: {
@@ -73,6 +74,8 @@ class TodayTasksScreen extends React.Component {
     }
   };
 
+  componentDidMount() {}
+
   onPressButton() {
     const { navigation } = this.props;
     navigation.state.params.updateState('isGetData', false);
@@ -85,7 +88,7 @@ class TodayTasksScreen extends React.Component {
     this.setState({
       todayTitle
     });
-    await AsyncStorage.setItem('todayTitle', JSON.stringify(todayTitle));
+    await AsyncStorage.setItem('todayTitle', JSON.stringify(this.state));
   }
 
   render() {
