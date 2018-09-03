@@ -1,12 +1,13 @@
 import firebase from 'firebase';
 import { createStackNavigator } from 'react-navigation';
-import ENV from './env.json';
+import { FIREBASE } from './env.json';
 import TodayTasksScreen from './src/screens/TodayTasksScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import AsyncStorageScreen from './src/screens/AsyncStorage';
 
 require('firebase/firestore');
 
+const ENV = FIREBASE;
 const config = {
   apiKey: ENV.FIREBASE_API_KEY,
   authDomain: ENV.FIREBASE_AUTH_DOMAIN,
