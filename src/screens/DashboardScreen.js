@@ -17,6 +17,7 @@ import firebase from 'firebase';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import format from 'date-fns/format';
 import ja from 'date-fns/locale/ja';
+import { LINK } from '../../env.json';
 
 const styles = StyleSheet.create({
   container: {
@@ -264,7 +265,7 @@ class DashboardScreen extends React.Component {
           })}
           {this.renderButton('必要かも', () => {
             this.setState({ visibleModal: null });
-            Linking.openURL('https://www.infotop.jp/click.php?aid=364862&iid=50540');
+            Linking.openURL(LINK.GOODS);
           })}
         </View>
       </Card>
@@ -379,6 +380,7 @@ class DashboardScreen extends React.Component {
             // その日は達成したことがわかるように
             //  履歴を見れるようにこれはfirebase
             // tapで達成したらバトンを表示左寄せ
+            // 横になった時に変わらないように
             navigation.navigate('TodayTasks', {
               updateState: (key, value) => this.updateState(key, value)
             });
