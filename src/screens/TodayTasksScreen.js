@@ -5,14 +5,9 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
   AsyncStorage,
-  KeyboardAvoidingView,
   ScrollView
 } from 'react-native';
-import update from 'immutability-helper';
-import format from 'date-fns/format';
-import ja from 'date-fns/locale/ja';
 
 const styles = StyleSheet.create({
   container: {
@@ -63,7 +58,7 @@ const styles = StyleSheet.create({
 
 class TodayTasksScreen extends React.Component {
   static navigationOptions = () => ({
-    headerTitle: '目標を入力！'
+    headerTitle: '明日の自分に挑戦！'
   });
 
   state = {
@@ -79,6 +74,7 @@ class TodayTasksScreen extends React.Component {
   onPressButton() {
     const { navigation } = this.props;
     navigation.state.params.updateState('isGetData', false);
+    navigation.state.params.resetComplete();
     navigation.goBack();
   }
 
@@ -92,7 +88,6 @@ class TodayTasksScreen extends React.Component {
   }
 
   render() {
-    const { email } = this.state;
     return (
       <ScrollView>
         <View style={styles.container} behavior="padding" enabled>

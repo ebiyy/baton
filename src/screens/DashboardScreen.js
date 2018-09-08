@@ -17,6 +17,7 @@ import firebase from 'firebase';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import format from 'date-fns/format';
 import ja from 'date-fns/locale/ja';
+import { Svg } from 'expo';
 import { LINK } from '../../env.json';
 
 const styles = StyleSheet.create({
@@ -136,7 +137,7 @@ const AS_KEY = {
 
 class DashboardScreen extends React.Component {
   static navigationOptions = () => ({
-    headerTitle: '今日の目標！'
+    headerTitle: 'バトンチャレンジ！'
   });
 
   constructor(props) {
@@ -162,11 +163,16 @@ class DashboardScreen extends React.Component {
     },
     ongoing: {
       date: 0,
-      saveDate: ''
+      saveDate: '',
+      isCal: null
     },
     limitHour: {
       night: 18,
       deep: 3
+    },
+    baton: {
+      today: 0,
+      all: 0
     }
   };
 
@@ -184,10 +190,15 @@ class DashboardScreen extends React.Component {
    * @param {number} index 目標のインデックス
    */
   onPressButton(index) {
-    const { complete } = this.state;
+    const { complete, baton } = this.state;
     const { TITLE } = AS_KEY;
     complete[TITLE[index]] = !complete[TITLE[index]];
-    this.setState(complete);
+    if (complete[TITLE[index]]) {
+      baton.today += 1;
+    } else {
+      baton.today -= 1;
+    }
+    this.setState({ complete, baton });
   }
 
   /**
@@ -206,6 +217,14 @@ class DashboardScreen extends React.Component {
         }
         this.setState({
           ongoing
+        });
+      }
+    });
+    AsyncStorage.getItem('baton').then(value => {
+      if (value) {
+        const baton = JSON.parse(value);
+        this.setState({
+          baton
         });
       }
     });
@@ -260,7 +279,8 @@ class DashboardScreen extends React.Component {
             const { navigation } = this.props;
             this.setState({ visibleModal: null });
             navigation.navigate('TodayTasks', {
-              updateState: (key, value) => this.updateState(key, value)
+              updateState: (key, value) => this.updateState(key, value),
+              resetComplete: () => this.resetComplete()
             });
           })}
           {this.renderButton('必要かも', () => {
@@ -310,6 +330,18 @@ class DashboardScreen extends React.Component {
   }
 
   /**
+   * タスクコンプリートプロパティを初期化
+   */
+  resetComplete() {
+    this.updateState('complete', {
+      [AS_KEY.TITLE[0]]: false,
+      [AS_KEY.TITLE[1]]: false,
+      [AS_KEY.TITLE[2]]: false
+    });
+    this.setState({ baton: { today: 0 } });
+  }
+
+  /**
    * 完了マークをプッシュ判定し、目標エレメント作成
    * @param {string} key completeのキー
    */
@@ -328,22 +360,56 @@ class DashboardScreen extends React.Component {
   }
 
   /**
+   * 今日の達成度を計算(未使用)
+   */
+  calTodayComp() {
+    const { complete, baton } = this.state;
+    Object.keys(complete).forEach(key => {
+      if (complete[key]) {
+        baton.today += 1;
+      }
+    });
+    this.setState({ baton });
+  }
+
+  /**
    * 今日の達成をAsyncStorageに保存する
    */
   todaySummary() {
-    const { complete, ongoing } = this.state;
-    let isBaton = false;
-    Object.keys(complete).forEach(key => {
-      if (complete[key]) {
-        isBaton = true;
-      }
-    });
-    if (isBaton) {
+    const { ongoing, baton } = this.state;
+    ongoing.isCal = true;
+    if (baton.today > 0) {
       ongoing.date += 1;
-      ongoing.saveDate = new Date().toLocaleString();
-      this.setState({ ongoing });
-      AsyncStorage.setItem('ongoing', JSON.stringify(ongoing));
+      ongoing.saveDate = new Date().toLocaleString('ja');
     }
+    baton.all += baton.today;
+    this.setState({ ongoing, baton });
+    AsyncStorage.setItem('ongoing', JSON.stringify(ongoing));
+    AsyncStorage.setItem('baton', JSON.stringify(baton));
+  }
+
+  /**
+   * バトンジェネレーター
+   */
+  generatorBatonElement() {
+    const { baton } = this.state;
+    const { Path, G } = Svg;
+    const elements = [];
+    for (let i = 0; i < baton.today; i += 1) {
+      elements.push(
+        <View key={i} style={{ width: '30%' }}>
+          <Svg width="70" height="70" viewBox="0 0 100 100">
+            <G
+              transform="translate(50 50) scale(0.40 0.40) rotate(0) translate(-50 -50)"
+              fill="#34C8FF"
+            >
+              <Path d="M58.3,31L46.1,18.8c0-4,4.1-8,8-8L66.3,23L58.3,31z M101,82c9.8-1.6,14.7-6.5,16.3-16.3L55.2,3.6  c-9.8,1.6-14.7,6.5-16.3,16.3L101,82z M74.1-13.6c-2.8-1.6-2.8-1.6-4.4,1.2L68-9.6c-1.6,2.9-1.6,2.9,1.2,4.5L72-3.4  c2.8,1.6,2.8,1.6,4.4-1.2l1.6-2.8c1.6-2.8,1.6-2.8-1.2-4.4L74.1-13.6z M91.8,16.3h-3.3c-3.3,0-3.3,0-3.3,3.3v3.3  c0,3.3,0,3.3,3.3,3.3h3.3c3.3,0,3.3,0,3.3-3.3v-3.3C95.1,16.3,95.1,16.3,91.8,16.3z M57.5-18h-3.3C51-18,51-18,51-14.7v3.3  c0,3.3,0,3.3,3.3,3.3h3.3c3.3,0,3.3,0,3.3-3.3v-3.3C60.8-18,60.8-18,57.5-18z M37.7-13.6l-2.9,1.6c-2.8,1.6-2.8,1.6-1.2,4.4l1.6,2.8  c1.6,2.9,1.6,2.9,4.4,1.2l2.9-1.6c2.8-1.6,2.8-1.6,1.2-4.5l-1.6-2.8C40.5-15.2,40.5-15.2,37.7-13.6z M27.2-1  c-2.8-1.6-2.8-1.6-4.4,1.2L21.1,3c-1.6,2.8-1.6,2.8,1.2,4.4l2.8,1.6c2.9,1.6,2.9,1.6,4.5-1.2l1.6-2.9c1.6-2.8,1.6-2.8-1.2-4.4  L27.2-1z M23.2,16.3h-3.3c-3.3,0-3.3,0-3.3,3.3v3.3c0,3.3,0,3.3,3.3,3.3h3.3c3.3,0,3.3,0,3.3-3.3v-3.3  C26.5,16.3,26.5,16.3,23.2,16.3z M57.5,50.6h-3.3c-3.3,0-3.3,0-3.3,3.3v3.3c0,3.3,0,3.3,3.3,3.3h3.3c3.3,0,3.3,0,3.3-3.3v-3.3  C60.8,50.6,60.8,50.6,57.5,50.6z M25.1,33.3l-2.8,1.6c-2.8,1.6-2.8,1.6-1.2,4.4l1.6,2.9c1.6,2.8,1.6,2.8,4.4,1.2l2.8-1.6  c2.9-1.6,2.9-1.6,1.2-4.4l-1.6-2.9C28,31.7,28,31.7,25.1,33.3z M39.7,45.9c-2.8-1.6-2.8-1.6-4.4,1.2l-1.6,2.8  c-1.6,2.8-1.6,2.8,1.2,4.4l2.9,1.6c2.8,1.6,2.8,1.6,4.4-1.2l1.6-2.8c1.6-2.9,1.6-2.9-1.2-4.5L39.7,45.9z M84.6-1l-2.8,1.6  c-2.9,1.6-2.9,1.6-1.2,4.4l1.6,2.9c1.6,2.8,1.6,2.8,4.5,1.2l2.8-1.6c2.8-1.6,2.8-1.6,1.2-4.4L89,0.2C87.4-2.6,87.4-2.6,84.6-1z" />
+            </G>
+          </Svg>
+        </View>
+      );
+    }
+    return <View style={{ flexDirection: 'row', maxWidth: '50%' }}>{elements}</View>;
   }
 
   /**
@@ -366,29 +432,51 @@ class DashboardScreen extends React.Component {
    * 明日の目標設定ボタン表示非表示切り替えメソッド
    */
   renderNextTitleContent() {
-    const { limitHour } = this.state;
+    const { limitHour, ongoing } = this.state;
     const now = format(new Date(), 'HH');
     if (now >= limitHour.night || now <= limitHour.deep) {
+      if (!ongoing.isCal) {
+        return (
+          <View>
+            {this.renderButton('今日の成果を集計', () => {
+              this.todaySummary();
+            })}
+          </View>
+        );
+      }
       return (
-        <View style={{ alignSelf: 'flex-end' }}>
-          {this.renderButton('明日の目標も設定', () => {
-            this.todaySummary();
+        <View>
+          {this.renderButton('明日の目標を設定', () => {
             const { navigation } = this.props;
-            // todo
-            // コンプリート初期化、入力があったらこのボタンを非表示に
-            //  明日にならないと目標をあまり見えないように、タップもできない
-            // その日は達成したことがわかるように
-            //  履歴を見れるようにこれはfirebase
-            // tapで達成したらバトンを表示左寄せ
-            // 横になった時に変わらないように
             navigation.navigate('TodayTasks', {
-              updateState: (key, value) => this.updateState(key, value)
+              updateState: (key, value) => this.updateState(key, value),
+              resetComplete: () => this.resetComplete()
             });
           })}
         </View>
       );
     }
     return null;
+  }
+
+  /**
+   *  今日の結果出力
+   */
+  renderResultContent() {
+    const { baton, limitHour } = this.state;
+    const now = format(new Date(), 'HH');
+    if (now >= limitHour.night || now <= limitHour.deep) {
+      if (baton.all > 0 || baton.today > 0) {
+        return (
+          <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between' }}>
+            {this.generatorBatonElement()}
+            {this.renderNextTitleContent()}
+          </View>
+        );
+      }
+      return <View style={{ alignSelf: 'flex-end' }}>{this.renderNextTitleContent()}</View>;
+    }
+    return <View style={{ alignSelf: 'flex-start' }}>{this.generatorBatonElement()}</View>;
   }
 
   render() {
@@ -404,7 +492,7 @@ class DashboardScreen extends React.Component {
       const ongoingDate = `${ongoing.date}日`;
       return (
         <View style={styles.container}>
-          {this.renderNextTitleContent()}
+          {this.renderResultContent()}
           <View style={styles.mainBox}>
             <View>
               <Text style={[styles.mainText, { fontSize: width / 3.8 }]}>{ongoingDate}</Text>
