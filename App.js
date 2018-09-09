@@ -3,7 +3,6 @@ import { createStackNavigator } from 'react-navigation';
 import { FIREBASE } from './env.json';
 import TodayTasksScreen from './src/screens/TodayTasksScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
-import AsyncStorageScreen from './src/screens/AsyncStorage';
 
 require('firebase/firestore');
 
@@ -22,9 +21,7 @@ const App = createStackNavigator(
   {
     // Login: { screen: LoginScreen },
     Dashboard: { screen: DashboardScreen },
-    TodayTasks: { screen: TodayTasksScreen },
-    Storage: { screen: AsyncStorageScreen }
-
+    TodayTasks: { screen: TodayTasksScreen }
     // Signup: { screen: SignupScreen },
     // Home: { screen: MemoListScreen },
     // MemoDetail: { screen: MemoDetailScreen },

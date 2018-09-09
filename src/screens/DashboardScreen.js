@@ -97,10 +97,15 @@ const styles = StyleSheet.create({
   }
 });
 
-async function firebaseAuth() {
+async function firebaseAutha() {
   firebase
     .auth()
     .signInAnonymously()
+    .then(() => {
+      const { currentUser } = firebase.auth();
+      console.warn(currentUser.uid);
+      AsyncStorage.setItem('uid', JSON.stringify(currentUser.uid));
+    })
     .catch(error => {
       // Handle Errors here.
       const errorCode = error.code;
@@ -147,6 +152,7 @@ class DashboardScreen extends React.Component {
   }
 
   state = {
+    uid: '',
     isTodayData: false,
     isGetData: false,
     isLoading: true,
@@ -167,7 +173,7 @@ class DashboardScreen extends React.Component {
       isCal: null
     },
     limitHour: {
-      night: 18,
+      night: 9,
       deep: 3
     },
     baton: {
@@ -181,8 +187,16 @@ class DashboardScreen extends React.Component {
    * 描画は全て処理が終わったからになるのでローディング設定がいる
    */
   componentDidMount() {
-    firebaseAuth();
-    this.setOngoing();
+    // for debug
+    // Expo.SecureStore.deleteItemAsync('uid');
+    Expo.SecureStore.getItemAsync('uid').then(uid => {
+      if (uid) {
+        this.setState({ uid });
+      } else {
+        this.firebaseAuth();
+      }
+    });
+    this.getLocalData();
   }
 
   /**
@@ -199,13 +213,16 @@ class DashboardScreen extends React.Component {
       baton.today -= 1;
     }
     this.setState({ complete, baton });
+    AsyncStorage.setItem('complete', JSON.stringify(complete));
+    AsyncStorage.setItem('baton', JSON.stringify(baton));
   }
 
   /**
    * 継続日数をAsyncStorageから取得
    * 最後の目標達成日から1.5日過ぎてればリセット
    */
-  setOngoing() {
+  getLocalData() {
+    let { todayTitle } = this.setState;
     AsyncStorage.getItem('ongoing').then(value => {
       if (value) {
         const ongoing = JSON.parse(value);
@@ -214,10 +231,14 @@ class DashboardScreen extends React.Component {
         const df = nowDate - saveDate;
         if (df / 1000 / 60 / 60 / 24 > 1.5) {
           ongoing.date = 0;
+          todayTitle = {
+            [AS_KEY.TITLE[0]]: '',
+            [AS_KEY.TITLE[1]]: '',
+            [AS_KEY.TITLE[2]]: ''
+          };
+          this.setState({ todayTitle });
         }
-        this.setState({
-          ongoing
-        });
+        this.setState({ ongoing });
       }
     });
     AsyncStorage.getItem('baton').then(value => {
@@ -225,6 +246,14 @@ class DashboardScreen extends React.Component {
         const baton = JSON.parse(value);
         this.setState({
           baton
+        });
+      }
+    });
+    AsyncStorage.getItem('complete').then(value => {
+      if (value) {
+        const complete = JSON.parse(value);
+        this.setState({
+          complete
         });
       }
     });
@@ -237,7 +266,6 @@ class DashboardScreen extends React.Component {
    */
   setTodayTitle() {
     // for debug
-    // AsyncStorage.removeItem(AS_KEY.TODAY_TITLE);
     // AsyncStorage.clear();
     AsyncStorage.getItem(AS_KEY.TODAY_TITLE).then(value => {
       this.setState({
@@ -251,6 +279,30 @@ class DashboardScreen extends React.Component {
         });
       }
     });
+  }
+
+  /**
+   * firebase匿名アカウント作成（初回のみ）
+   */
+  async firebaseAuth() {
+    firebase
+      .auth()
+      .signInAnonymously()
+      .then(currentUser => {
+        // console.warn('firebase');
+        const { user } = currentUser;
+        this.setState({ uid: user.uid });
+        Expo.SecureStore.setItemAsync('uid', user.uid);
+      })
+      .catch(error => {
+        // Handle Errors here.
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        // console.warn(errorCode);
+        // console.warn(errorMessage);
+        Alert.alert('エラー');
+        // ...
+      });
   }
 
   /**
@@ -321,11 +373,11 @@ class DashboardScreen extends React.Component {
       color = '#DDD';
     }
     return (
-      <View style={[inputBox, { backgroundColor: color }]}>
-        <TouchableOpacity onPress={() => this.onPressButton(index)}>
+      <TouchableOpacity onPress={() => this.onPressButton(index)}>
+        <View style={[inputBox, { backgroundColor: color }]}>
           {this.toggleCheakMark(TITLE[index])}
-        </TouchableOpacity>
-      </View>
+        </View>
+      </TouchableOpacity>
     );
   }
 
@@ -333,12 +385,17 @@ class DashboardScreen extends React.Component {
    * タスクコンプリートプロパティを初期化
    */
   resetComplete() {
-    this.updateState('complete', {
+    let { complete } = this.state;
+    const { baton } = this.state;
+    complete = {
       [AS_KEY.TITLE[0]]: false,
       [AS_KEY.TITLE[1]]: false,
       [AS_KEY.TITLE[2]]: false
-    });
-    this.setState({ baton: { today: 0 } });
+    };
+    baton.today = 0;
+    this.setState({ complete, baton });
+    AsyncStorage.setItem('complete', JSON.stringify(complete));
+    AsyncStorage.setItem('baton', JSON.stringify(baton));
   }
 
   /**
@@ -381,11 +438,45 @@ class DashboardScreen extends React.Component {
     if (baton.today > 0) {
       ongoing.date += 1;
       ongoing.saveDate = new Date().toLocaleString('ja');
+      baton.all += baton.today;
+      AsyncStorage.setItem('baton', JSON.stringify(baton));
+    } else {
+      ongoing.date = 0;
     }
-    baton.all += baton.today;
     this.setState({ ongoing, baton });
     AsyncStorage.setItem('ongoing', JSON.stringify(ongoing));
-    AsyncStorage.setItem('baton', JSON.stringify(baton));
+    this.pushFirebase();
+  }
+
+  pushFirebase() {
+    const db = firebase.firestore();
+    const { currentUser } = firebase.auth();
+    const { uid, todayTitle, complete, limitHour } = this.state;
+    if (uid !== currentUser.uid) {
+      Alert.alert(
+        'エラーが発生し、アプリが正しく動作できませんでした。お手数お掛け致しますが、この画面をスクショしてお送りください。'
+      );
+    }
+    let now = new Date().toLocaleString('ja');
+    const nowHour = format(now, 'HH');
+    if (nowHour <= limitHour.deep) {
+      now = now.setDate(now - 1);
+    }
+    const date = `${format(now, 'YYYY')}年 ${format(now, 'MMM Do dddd', { locale: ja })}`;
+    db.settings({ timestampsInSnapshots: true });
+    db.collection(`users/${currentUser.uid}/todayTitle`)
+      .add({
+        todayTitle,
+        complete,
+        createdOn: new Date(),
+        date
+      })
+      .then(() => {
+        // this.props.navigation.goBack();
+      })
+      .catch(error => {
+        // console.warn(error);
+      });
   }
 
   /**
@@ -432,38 +523,34 @@ class DashboardScreen extends React.Component {
    * 明日の目標設定ボタン表示非表示切り替えメソッド
    */
   renderNextTitleContent() {
-    const { limitHour, ongoing } = this.state;
-    const now = format(new Date(), 'HH');
-    if (now >= limitHour.night || now <= limitHour.deep) {
-      if (!ongoing.isCal) {
-        return (
-          <View>
-            {this.renderButton('今日の成果を集計', () => {
-              this.todaySummary();
-            })}
-          </View>
-        );
-      }
+    const { ongoing } = this.state;
+    if (!ongoing.isCal) {
       return (
         <View>
-          {this.renderButton('明日の目標を設定', () => {
-            const { navigation } = this.props;
-            navigation.navigate('TodayTasks', {
-              updateState: (key, value) => this.updateState(key, value),
-              resetComplete: () => this.resetComplete()
-            });
+          {this.renderButton('今日の成果を集計', () => {
+            this.todaySummary();
           })}
         </View>
       );
     }
-    return null;
+    return (
+      <View>
+        {this.renderButton('明日の目標を設定', () => {
+          const { navigation } = this.props;
+          navigation.navigate('TodayTasks', {
+            updateState: (key, value) => this.updateState(key, value),
+            resetComplete: () => this.resetComplete()
+          });
+        })}
+      </View>
+    );
   }
 
   /**
    *  今日の結果出力
    */
   renderResultContent() {
-    const { baton, limitHour } = this.state;
+    const { baton, limitHour, ongoing } = this.state;
     const now = format(new Date(), 'HH');
     if (now >= limitHour.night || now <= limitHour.deep) {
       if (baton.all > 0 || baton.today > 0) {
@@ -475,6 +562,12 @@ class DashboardScreen extends React.Component {
         );
       }
       return <View style={{ alignSelf: 'flex-end' }}>{this.renderNextTitleContent()}</View>;
+    }
+    // 昼間に目標計算フラグを初期化（TODO：昼間開かなかった時。。。）
+    if (ongoing.isCal) {
+      ongoing.isCal = false;
+      this.setState({ ongoing });
+      AsyncStorage.setItem('ongoing', JSON.stringify(ongoing));
     }
     return <View style={{ alignSelf: 'flex-start' }}>{this.generatorBatonElement()}</View>;
   }
@@ -496,7 +589,7 @@ class DashboardScreen extends React.Component {
           <View style={styles.mainBox}>
             <View>
               <Text style={[styles.mainText, { fontSize: width / 3.8 }]}>{ongoingDate}</Text>
-              <Text style={{ fontSize: 20, alignSelf: 'center' }}>連続継続中</Text>
+              <Text style={{ fontSize: 20, alignSelf: 'center' }}>継続中</Text>
             </View>
           </View>
           {this.renderTodayTitleContent()}
@@ -513,7 +606,7 @@ class DashboardScreen extends React.Component {
         </View>
         <TouchableOpacity
           onPress={() => {
-            this.updateState('visibleModal', true);
+            this.setState({ visibleModal: true });
           }}
         >
           <View style={styles.button}>
