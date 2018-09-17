@@ -8,7 +8,8 @@ import {
   Dimensions,
   Alert,
   Linking,
-  AsyncStorage
+  AsyncStorage,
+  Button
 } from 'react-native';
 import Expo from 'expo';
 import Modal from 'react-native-modal';
@@ -131,6 +132,32 @@ async function firebaseAutha() {
 }
 
 /**
+ *モーダルコンテンツ
+ *
+ * @memberof DashboardScreen
+ */
+function goSettingButton(navigation) {
+  let limitHour;
+  AsyncStorage.getItem('limitHour').then(value => {
+    if (!value) {
+      limitHour = { startTime: 18, endTime: 3 };
+    } else {
+      limitHour = JSON.parse(value);
+    }
+  });
+  return (
+    <View style={{ backgroundColor: 'white', marginEnd: 5, borderRadius: 5 }}>
+      <Button
+        onPress={() => {
+          navigation.navigate('Setting', { limitHour });
+        }}
+        title="設定"
+      />
+    </View>
+  );
+}
+
+/**
  * AsyncStorage保存先キー
  */
 const AS_KEY = {
@@ -141,8 +168,21 @@ const AS_KEY = {
 };
 
 class DashboardScreen extends React.Component {
-  static navigationOptions = () => ({
-    headerTitle: 'バトンチャレンジ！'
+  static navigationOptions = ({ navigation }) => ({
+    headerTitle: 'バトンチャレンジ！',
+    // headerRight: goSettingButton(navigation)
+    headerRight: (
+      <View style={{ backgroundColor: 'white', marginEnd: 5, borderRadius: 5 }}>
+        <Button
+          onPress={() => {
+            navigation.navigate('Setting', {
+              updateState: navigation.state.params.setting
+            });
+          }}
+          title="設定"
+        />
+      </View>
+    )
   });
 
   constructor(props) {
@@ -173,8 +213,8 @@ class DashboardScreen extends React.Component {
       isCal: null
     },
     limitHour: {
-      night: 9,
-      deep: 3
+      startTime: 18,
+      endTime: 3
     },
     baton: {
       today: 0,
@@ -187,16 +227,27 @@ class DashboardScreen extends React.Component {
    * 描画は全て処理が終わったからになるのでローディング設定がいる
    */
   componentDidMount() {
+    // const { currentUser } = firebase.auth();
+    // console.warn(currentUser);
+    // // this.setState({ uid: currentUser.uid });
+    // if (!currentUser) {
+    //   this.firebaseAuth();
+    // }
     // for debug
     // Expo.SecureStore.deleteItemAsync('uid');
-    Expo.SecureStore.getItemAsync('uid').then(uid => {
-      if (uid) {
-        this.setState({ uid });
-      } else {
-        this.firebaseAuth();
-      }
-    });
+    // Expo.SecureStore.getItemAsync('uid').then(uid => {
+    //   if (uid) {
+    //     this.setState({ uid });
+    //   } else {
+    //     this.firebaseAuth();
+    //   }
+    // });
+    this.firebaseAuth();
     this.getLocalData();
+    const { navigation } = this.props;
+    navigation.setParams({
+      setting: (key, value) => this.updateState(key, value)
+    });
   }
 
   /**
@@ -244,17 +295,19 @@ class DashboardScreen extends React.Component {
     AsyncStorage.getItem('baton').then(value => {
       if (value) {
         const baton = JSON.parse(value);
-        this.setState({
-          baton
-        });
+        this.setState({ baton });
       }
     });
     AsyncStorage.getItem('complete').then(value => {
       if (value) {
         const complete = JSON.parse(value);
-        this.setState({
-          complete
-        });
+        this.setState({ complete });
+      }
+    });
+    AsyncStorage.getItem('limitHour').then(value => {
+      if (value) {
+        const limitHour = JSON.parse(value);
+        this.setState({ limitHour });
       }
     });
   }
@@ -292,7 +345,6 @@ class DashboardScreen extends React.Component {
         // console.warn('firebase');
         const { user } = currentUser;
         this.setState({ uid: user.uid });
-        Expo.SecureStore.setItemAsync('uid', user.uid);
       })
       .catch(error => {
         // Handle Errors here.
@@ -448,18 +500,21 @@ class DashboardScreen extends React.Component {
     this.pushFirebase();
   }
 
+  /**
+   * 達成度登録の際にFirebaseに今日のタスク達成情報を追加
+   */
   pushFirebase() {
     const db = firebase.firestore();
     const { currentUser } = firebase.auth();
     const { uid, todayTitle, complete, limitHour } = this.state;
-    if (uid !== currentUser.uid) {
-      Alert.alert(
-        'エラーが発生し、アプリが正しく動作できませんでした。お手数お掛け致しますが、この画面をスクショしてお送りください。'
-      );
-    }
+    // if (uid !== currentUser.uid) {
+    //   Alert.alert(
+    //     'エラーが発生し、アプリが正しく動作できませんでした。お手数お掛け致しますが、この画面をスクショしてお送りください。'
+    //   );
+    // }
     let now = new Date().toLocaleString('ja');
     const nowHour = format(now, 'HH');
-    if (nowHour <= limitHour.deep) {
+    if (nowHour <= limitHour.endTime) {
       now = now.setDate(now - 1);
     }
     const date = `${format(now, 'YYYY')}年 ${format(now, 'MMM Do dddd', { locale: ja })}`;
@@ -552,7 +607,7 @@ class DashboardScreen extends React.Component {
   renderResultContent() {
     const { baton, limitHour, ongoing } = this.state;
     const now = format(new Date(), 'HH');
-    if (now >= limitHour.night || now <= limitHour.deep) {
+    if (now >= limitHour.startTime || now <= limitHour.endTime) {
       if (baton.all > 0 || baton.today > 0) {
         return (
           <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between' }}>

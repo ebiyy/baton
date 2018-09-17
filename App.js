@@ -3,6 +3,7 @@ import { createStackNavigator } from 'react-navigation';
 import { FIREBASE } from './env.json';
 import TodayTasksScreen from './src/screens/TodayTasksScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
+import SettingScreen from './src/screens/SettingScreen';
 
 require('firebase/firestore');
 
@@ -21,7 +22,8 @@ const App = createStackNavigator(
   {
     // Login: { screen: LoginScreen },
     Dashboard: { screen: DashboardScreen },
-    TodayTasks: { screen: TodayTasksScreen }
+    TodayTasks: { screen: TodayTasksScreen },
+    Setting: { screen: SettingScreen }
     // Signup: { screen: SignupScreen },
     // Home: { screen: MemoListScreen },
     // MemoDetail: { screen: MemoDetailScreen },
