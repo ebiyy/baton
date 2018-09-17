@@ -11,14 +11,13 @@ import {
   AsyncStorage,
   Button
 } from 'react-native';
-import Expo from 'expo';
+import Expo, { Svg } from 'expo';
 import Modal from 'react-native-modal';
 import { Card } from 'react-native-elements';
 import firebase from 'firebase';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import format from 'date-fns/format';
 import ja from 'date-fns/locale/ja';
-import { Svg } from 'expo';
 import { LINK } from '../../env.json';
 
 const styles = StyleSheet.create({
@@ -132,32 +131,6 @@ async function firebaseAutha() {
 }
 
 /**
- *モーダルコンテンツ
- *
- * @memberof DashboardScreen
- */
-function goSettingButton(navigation) {
-  let limitHour;
-  AsyncStorage.getItem('limitHour').then(value => {
-    if (!value) {
-      limitHour = { startTime: 18, endTime: 3 };
-    } else {
-      limitHour = JSON.parse(value);
-    }
-  });
-  return (
-    <View style={{ backgroundColor: 'white', marginEnd: 5, borderRadius: 5 }}>
-      <Button
-        onPress={() => {
-          navigation.navigate('Setting', { limitHour });
-        }}
-        title="設定"
-      />
-    </View>
-  );
-}
-
-/**
  * AsyncStorage保存先キー
  */
 const AS_KEY = {
@@ -170,7 +143,6 @@ const AS_KEY = {
 class DashboardScreen extends React.Component {
   static navigationOptions = ({ navigation }) => ({
     headerTitle: 'バトンチャレンジ！',
-    // headerRight: goSettingButton(navigation)
     headerRight: (
       <View style={{ backgroundColor: 'white', marginEnd: 5, borderRadius: 5 }}>
         <Button
@@ -244,6 +216,7 @@ class DashboardScreen extends React.Component {
     // });
     this.firebaseAuth();
     this.getLocalData();
+    // pramasに関数をセット
     const { navigation } = this.props;
     navigation.setParams({
       setting: (key, value) => this.updateState(key, value)

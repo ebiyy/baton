@@ -2,7 +2,6 @@ import React from 'react';
 import {
   StyleSheet,
   View,
-  Text,
   TextInput,
   TouchableOpacity,
   AsyncStorage,
@@ -10,7 +9,8 @@ import {
   Image,
   Picker
 } from 'react-native';
-import { List, ListItem, Divider } from 'react-native-elements';
+import { List, ListItem, Divider, Overlay, Text } from 'react-native-elements';
+import Modal from 'react-native-modal';
 
 const styles = StyleSheet.create({
   subtitleView: {
@@ -25,6 +25,23 @@ const styles = StyleSheet.create({
   ratingText: {
     paddingLeft: 10,
     color: 'grey'
+  },
+  rivider: {
+    backgroundColor: '#265366',
+    marginVertical: 15
+  },
+  bottomModal: {
+    justifyContent: 'flex-end',
+    margin: 0
+  },
+  button: {
+    backgroundColor: 'lightblue',
+    padding: 12,
+    margin: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 4,
+    borderColor: 'rgba(0, 0, 0, 0.1)'
   }
 });
 
@@ -48,7 +65,8 @@ class SettingScreen extends React.Component {
     limitHour: {
       startTime: null,
       endTime: null
-    }
+    },
+    visibleModal: false
   };
 
   componentWillMount() {
@@ -66,6 +84,33 @@ class SettingScreen extends React.Component {
 
   componentDidMount() {}
 
+  renderButton = (text, onPress) => (
+    <TouchableOpacity onPress={onPress}>
+      <View style={styles.button}>
+        <Text>{text}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  renderModalContent = () => (
+    <View style={styles.modalContent}>
+      <Text>Hello!</Text>
+      {this.renderButton('Close', () => this.setState({ visibleModal: null }))}
+    </View>
+  );
+
+  handleOnScroll = event => {
+    this.setState({
+      scrollOffset: event.nativeEvent.contentOffset.y
+    });
+  };
+
+  handleScrollTo = p => {
+    if (this.scrollViewRef) {
+      this.scrollViewRef.scrollTo(p);
+    }
+  };
+
   /**
    * Pickerの値が変わった時、limitHourをアップデート
    * @param {*} limitHour
@@ -78,14 +123,21 @@ class SettingScreen extends React.Component {
   }
 
   render() {
-    const { limitHour } = this.state;
+    const { limitHour, visibleModal, scrollOffset } = this.state;
     const { startTime, endTime } = limitHour;
     const timeText = `集計時間設定    ${startTime}時 から ${endTime}時まで`;
     return (
       <View>
         <View>
-          <ListItem title="ユーザーポリシー" />
+          <TouchableOpacity
+            onPress={() => {
+              this.setState({ visibleModal: true });
+            }}
+          >
+            <ListItem title="ユーザーポリシー" />
+          </TouchableOpacity>
         </View>
+        <Divider style={{ backgroundColor: '#265366' }} />
         <View>
           <ListItem roundAvatar title={timeText} />
         </View>
@@ -113,6 +165,92 @@ class SettingScreen extends React.Component {
             </Picker>
           </View>
         </View>
+        <Modal
+          isVisible={visibleModal}
+          onSwipe={() => this.setState({ visibleModal: false })}
+          swipeDirection="down"
+          scrollTo={this.handleScrollTo}
+          scrollOffset={scrollOffset}
+          scrollOffsetMax={400 - 300} // content height - ScrollView height
+          style={styles.bottomModal}
+        >
+          <View style={{ backgroundColor: 'white', margin: 10, borderRadius: 10 }}>
+            <ScrollView
+              ref={ref => (this.scrollViewRef = ref)}
+              onScroll={this.handleOnScroll}
+              scrollEventThrottle={16}
+              style={{ margin: 10 }}
+            >
+              <TouchableOpacity
+                onPress={() => {
+                  this.setState({ visibleModal: false });
+                }}
+              >
+                <View style={styles.button}>
+                  <Text>閉じる</Text>
+                </View>
+              </TouchableOpacity>
+              <Text h3>プライバシーポリシー</Text>
+              <Text>
+                batonは、自分用のメモを作成、保存、編集ができるモバイルアプリケーションです。
+              </Text>
+              <Divider style={styles.rivider} />
+              <Text h4>個人情報保護方針</Text>
+              <Text>
+                以下のとおり個人情報保護方針を定め、個人情報保護の仕組みを構築し、個人情報保護の重要性と認識と取り組みを徹底することにより、個人情報の保護を推進いたします。
+              </Text>
+              <Divider style={styles.rivider} />
+              <Text h4>個人情報の管理</Text>
+              <Text>
+                ユーザーの個人情報を正確かつ最新の状態に保ち、個人情報への不正アクセス・紛失・破損・改ざん・漏えいなどを防止するため、セキュリティシステムの維持・管理の徹底等の必要な措置を講じ、安全対策を実施し、個人情報の厳重な管理を行います。
+              </Text>
+              <Divider style={styles.rivider} />
+              <Text h4>個人情報の利用目的</Text>
+              <Text>
+                アプリ利用には、メールアドレスとパスワードによる登録が必要になることを予定しています。この認証情報は、ユーザーがアプリを利用することを可能にする目的以外では利用いたしません。メールアドレスに関しましては、アプリ運営からのご連絡やご案内に使用する場合がございます。
+              </Text>
+              <Divider style={styles.rivider} />
+              <Text h4>個人情報の第三者への開示・提供の禁止</Text>
+              <Text>
+                当アプリは運営は、ユーザーよりお預かりした個人情報を適切に管理し、次のいずれかに該当する場合いを除き、個人情報を第三者に開示いたしません。
+                ・ユーザーの同意がある場合
+                ・ユーザーが希望されるサービスを行うために当社が業務を委託する業者に対して開示する場合
+                ・法令に基づき開示することが必要な場合
+              </Text>
+              <Divider style={styles.rivider} />
+              <Text h4>個人情報の安全対策</Text>
+              <Text>
+                個人情報の正確性及び安全性確保のために、セキュリティに万全の対策を講じます。
+              </Text>
+              <Divider style={styles.rivider} />
+              <Text h4>ご本人の照会</Text>
+              <Text>
+                ユーザーがご本人の個人情報の照会・修正・削除などをご希望される場合には、ご本人であることを確認の上、対応させていただきます。
+              </Text>
+              <Divider style={styles.rivider} />
+              <Text h4>法令、規範の遵守と見直し</Text>
+              <Text>
+                保有する個人情報に関して適用される日本の法令、その他規範を遵守するとともに、本ポリシーの内容を適宜見直し、その改善に努めます。
+              </Text>
+              <Divider style={styles.rivider} />
+              <Text h4>お問い合わせ</Text>
+              <Text>
+                個人情報の取り扱いに関するお問い合わせは、 mankutsuu – at – gmail.com
+                までご連絡ください。
+              </Text>
+              <Divider style={styles.rivider} />
+              <TouchableOpacity
+                onPress={() => {
+                  this.setState({ visibleModal: false });
+                }}
+              >
+                <View style={styles.button}>
+                  <Text>閉じる</Text>
+                </View>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </Modal>
       </View>
     );
   }
