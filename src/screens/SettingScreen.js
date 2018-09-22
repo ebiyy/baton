@@ -1,31 +1,9 @@
 import React from 'react';
-import {
-  StyleSheet,
-  View,
-  TextInput,
-  TouchableOpacity,
-  AsyncStorage,
-  ScrollView,
-  Image,
-  Picker
-} from 'react-native';
-import { List, ListItem, Divider, Overlay, Text } from 'react-native-elements';
+import { StyleSheet, View, TouchableOpacity, AsyncStorage, ScrollView, Picker } from 'react-native';
+import { ListItem, Divider, Text } from 'react-native-elements';
 import Modal from 'react-native-modal';
 
 const styles = StyleSheet.create({
-  subtitleView: {
-    flexDirection: 'row',
-    paddingLeft: 10,
-    paddingTop: 5
-  },
-  ratingImage: {
-    height: 19.21,
-    width: 100
-  },
-  ratingText: {
-    paddingLeft: 10,
-    color: 'grey'
-  },
   rivider: {
     backgroundColor: '#265366',
     marginVertical: 15
@@ -89,19 +67,14 @@ class SettingScreen extends React.Component {
 
   componentDidMount() {}
 
+  // react-native-modal/Example.js at master · react-native-community/react-native-modal - https://goo.gl/DuzvHQ
+  // 上記参考コード、他も（モーダルスクロール）
   renderButton = (text, onPress) => (
     <TouchableOpacity onPress={onPress}>
       <View style={styles.button}>
         <Text>{text}</Text>
       </View>
     </TouchableOpacity>
-  );
-
-  renderModalContent = () => (
-    <View style={styles.modalContent}>
-      <Text>Hello!</Text>
-      {this.renderButton('Close', () => this.setState({ visibleModal: null }))}
-    </View>
   );
 
   handleOnScroll = event => {
