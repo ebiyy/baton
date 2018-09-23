@@ -19,7 +19,10 @@
     "orientation": "portrait",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mankutsu.baton"
+      "bundleIdentifier": "com.mankutsu.baton",
+      "infoPlist": {
+        "CFBundleDevelopmentRegion": "ja_JP"
+      }
     },
     "android": {
       "package": "com.mankutsu.baton",

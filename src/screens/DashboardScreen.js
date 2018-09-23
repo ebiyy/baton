@@ -9,7 +9,9 @@ import {
   Alert,
   Linking,
   AsyncStorage,
-  Button
+  Button,
+  AppState,
+  NetInfo
 } from 'react-native';
 import Expo, { Svg } from 'expo';
 import Modal from 'react-native-modal';
@@ -49,8 +51,8 @@ const styles = StyleSheet.create({
   mainBox: {
     marginBottom: 20,
     backgroundColor: '#fff0005c',
-    padding: 35,
-    borderRadius: 40
+    borderRadius: 40,
+    borderBottomRightRadius: 10
   },
   mainBoxStart: {
     backgroundColor: 'gray',
@@ -94,6 +96,15 @@ const styles = StyleSheet.create({
   bottomModal: {
     justifyContent: 'flex-end',
     margin: 0
+  },
+  historyButtom: {
+    width: 70,
+    alignSelf: 'flex-end',
+    backgroundColor: '#ffad61',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 25
   }
 });
 
@@ -103,7 +114,6 @@ async function firebaseAutha() {
     .signInAnonymously()
     .then(() => {
       const { currentUser } = firebase.auth();
-      console.warn(currentUser.uid);
       AsyncStorage.setItem('uid', JSON.stringify(currentUser.uid));
     })
     .catch(error => {
@@ -164,7 +174,9 @@ class DashboardScreen extends React.Component {
   }
 
   state = {
+    appState: AppState.currentState,
     uid: '',
+    data: [],
     isTodayData: false,
     isGetData: false,
     isLoading: true,
@@ -221,6 +233,13 @@ class DashboardScreen extends React.Component {
     navigation.setParams({
       setting: (key, value) => this.updateState(key, value)
     });
+    // アプリのアクティブ、非アクティブをキャッチ
+    AppState.addEventListener('change', this.handleAppStateChange);
+  }
+
+  componentWillUnmount() {
+    // アプリのアクティブ、非アクティブをキャッチ
+    AppState.removeEventListener('change', this.handleAppStateChange);
   }
 
   /**
@@ -283,6 +302,12 @@ class DashboardScreen extends React.Component {
         this.setState({ limitHour });
       }
     });
+    AsyncStorage.getItem('data').then(value => {
+      if (value) {
+        const data = JSON.parse(value);
+        this.setState({ data });
+      }
+    });
   }
 
   /**
@@ -306,6 +331,17 @@ class DashboardScreen extends React.Component {
       }
     });
   }
+
+  /**
+   * AppState.currentStateの変化イベントで呼ばれるメソッド
+   */
+  handleAppStateChange = nextAppState => {
+    const { appState } = this.state;
+    if (appState.match(/inactive|background/) && nextAppState === 'active') {
+      // console.warn('App has come to the foreground!');
+    }
+    this.setState({ appState: nextAppState });
+  };
 
   /**
    * firebase匿名アカウント作成（初回のみ）
@@ -479,32 +515,48 @@ class DashboardScreen extends React.Component {
   pushFirebase() {
     const db = firebase.firestore();
     const { currentUser } = firebase.auth();
-    const { uid, todayTitle, complete, limitHour } = this.state;
+    const { uid, todayTitle, complete, limitHour, data } = this.state;
     // if (uid !== currentUser.uid) {
     //   Alert.alert(
     //     'エラーが発生し、アプリが正しく動作できませんでした。お手数お掛け致しますが、この画面をスクショしてお送りください。'
     //   );
     // }
-    let now = new Date().toLocaleString('ja');
-    const nowHour = format(now, 'HH');
+    const now = new Date();
+    const nowHour = Number(format(now, 'HH'));
     if (nowHour <= limitHour.endTime) {
-      now = now.setDate(now - 1);
+      now.setDate(now.getDate() - 1);
     }
     const date = `${format(now, 'YYYY')}年 ${format(now, 'MMM Do dddd', { locale: ja })}`;
-    db.settings({ timestampsInSnapshots: true });
-    db.collection(`users/${currentUser.uid}/todayTitle`)
-      .add({
-        todayTitle,
-        complete,
-        createdOn: new Date(),
-        date
-      })
-      .then(() => {
-        // this.props.navigation.goBack();
-      })
-      .catch(error => {
-        // console.warn(error);
-      });
+    NetInfo.getConnectionInfo().then(connectionInfo => {
+      // console.warn(connectionInfo.type);
+      if (connectionInfo.type === 'none') {
+        // console.warn(JSON.stringify(data));
+        data.unshift({
+          todayTitle,
+          complete,
+          createOn: new Date(),
+          date
+        });
+        // console.warn(data);
+        AsyncStorage.setItem('data', JSON.stringify(data));
+        this.setState({ data });
+      } else {
+        db.settings({ timestampsInSnapshots: true });
+        db.collection(`users/${currentUser.uid}/todayTitle`)
+          .add({
+            todayTitle,
+            complete,
+            createOn: new Date(),
+            date
+          })
+          .then(() => {
+            // this.props.navigation.goBack();
+          })
+          .catch(error => {
+            // 登録できなかった時に実行
+          });
+      }
+    });
   }
 
   /**
@@ -579,8 +631,16 @@ class DashboardScreen extends React.Component {
    */
   renderResultContent() {
     const { baton, limitHour, ongoing } = this.state;
-    const now = format(new Date(), 'HH');
-    if (now >= limitHour.startTime || now <= limitHour.endTime) {
+    const now = Number(format(new Date(), 'HH'));
+    if (
+      // 0-4のような深夜帯に設定の時
+      (limitHour.startTime <= limitHour.endTime &&
+        limitHour.startTime <= now &&
+        now < limitHour.endTime) ||
+      // 18-4のような場合
+      (limitHour.startTime > limitHour.endTime &&
+        (now >= limitHour.startTime || now < limitHour.endTime))
+    ) {
       if (baton.all > 0 || baton.today > 0) {
         return (
           <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -600,9 +660,31 @@ class DashboardScreen extends React.Component {
     return <View style={{ alignSelf: 'flex-start' }}>{this.generatorBatonElement()}</View>;
   }
 
+  /**
+   * 達成履歴表示メソッド
+   */
+  renderHistoryButton = () => (
+    <View style={styles.historyButtom}>
+      <TouchableOpacity
+        onPress={() => {
+          const { navigation } = this.props;
+          const { data } = this.state;
+          navigation.navigate('History', {
+            data,
+            updateState: (key, value) => this.updateState(key, value)
+          });
+        }}
+      >
+        <View style={{ alignSelf: 'center' }}>
+          <Text style={{ color: 'white', fontWeight: 'bold' }}>達成履歴</Text>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+
   render() {
     const { height, width } = Dimensions.get('window');
-    const { isTodayData, visibleModal, isGetData, ongoing } = this.state;
+    const { isTodayData, visibleModal, isGetData, ongoing, uid } = this.state;
     // AsyncStorageから今日の目標を取得、取得後にisGetDataはfalseになる
     if (!isGetData) {
       this.setTodayTitle();
@@ -616,8 +698,11 @@ class DashboardScreen extends React.Component {
           {this.renderResultContent()}
           <View style={styles.mainBox}>
             <View>
-              <Text style={[styles.mainText, { fontSize: width / 3.8 }]}>{ongoingDate}</Text>
-              <Text style={{ fontSize: 20, alignSelf: 'center' }}>継続中</Text>
+              <View style={{ padding: 35, paddingBottom: 15 }}>
+                <Text style={[styles.mainText, { fontSize: width / 3.8 }]}>{ongoingDate}</Text>
+                <Text style={{ fontSize: 20, alignSelf: 'center' }}>継続中</Text>
+              </View>
+              {uid ? this.renderHistoryButton() : <View style={{ height: 25 }} />}
             </View>
           </View>
           {this.renderTodayTitleContent()}

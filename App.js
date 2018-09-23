@@ -4,6 +4,7 @@ import { FIREBASE } from './env.json';
 import TodayTasksScreen from './src/screens/TodayTasksScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import SettingScreen from './src/screens/SettingScreen';
+import HistoryScreen from './src/screens/HistoryScreen';
 
 require('firebase/firestore');
 
@@ -23,7 +24,8 @@ const App = createStackNavigator(
     // Login: { screen: LoginScreen },
     Dashboard: { screen: DashboardScreen },
     TodayTasks: { screen: TodayTasksScreen },
-    Setting: { screen: SettingScreen }
+    Setting: { screen: SettingScreen },
+    History: { screen: HistoryScreen }
     // Signup: { screen: SignupScreen },
     // Home: { screen: MemoListScreen },
     // MemoDetail: { screen: MemoDetailScreen },
