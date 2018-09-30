@@ -11,7 +11,8 @@ import {
   AsyncStorage,
   Button,
   AppState,
-  NetInfo
+  NetInfo,
+  AppStateStatus
 } from 'react-native';
 import Expo, { Svg } from 'expo';
 import Modal from 'react-native-modal';
@@ -20,7 +21,14 @@ import firebase from 'firebase';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import format from 'date-fns/format';
 import ja from 'date-fns/locale/ja';
-import { LINK } from '../../env.json';
+import {
+  NavigationScreenProp,
+  NavigationScreenProps,
+  NavigationScreenOptionsGetter,
+  NavigationScreenOptions,
+  NavigationScreenConfig
+} from 'react-navigation';
+import { LINK } from '../../env';
 
 const styles = StyleSheet.create({
   container: {
@@ -71,12 +79,6 @@ const styles = StyleSheet.create({
     color: 'white'
   },
   button: {
-    margin: 30,
-    marginBottom: 10,
-    width: 150,
-    borderRadius: 50
-  },
-  button: {
     backgroundColor: 'lightblue',
     padding: 12,
     margin: 16,
@@ -114,7 +116,9 @@ async function firebaseAutha() {
     .signInAnonymously()
     .then(() => {
       const { currentUser } = firebase.auth();
-      AsyncStorage.setItem('uid', JSON.stringify(currentUser.uid));
+      if (currentUser) {
+        AsyncStorage.setItem('uid', JSON.stringify(currentUser.uid));
+      }
     })
     .catch(error => {
       // Handle Errors here.
@@ -150,16 +154,78 @@ const AS_KEY = {
   TITLE: ['todayFirst', 'todaySecond', 'todayThird']
 };
 
-class DashboardScreen extends React.Component {
-  static navigationOptions = ({ navigation }) => ({
+export interface TitleData {
+  todayTitle: todayTitle;
+  complete: Complete;
+  createOn: Date;
+  date: string;
+}
+
+interface todayTitle {
+  [key: string]: string;
+}
+
+interface Complete {
+  [key: string]: boolean;
+}
+
+interface Ongoing {
+  date: number;
+  saveDate: string;
+  isCal: boolean | null;
+}
+
+interface limitHour {
+  startTime: number;
+  endTime: number;
+}
+
+interface Baton {
+  today: number;
+  all: number;
+}
+
+interface State {
+  [key: string]: any;
+  appState: AppStateStatus;
+  uid: string;
+  data: TitleData[];
+  isTodayData: boolean;
+  isGetData: boolean;
+  isLoading: boolean;
+  visibleModal: boolean | null;
+  todayTitle: todayTitle;
+  complete: Complete;
+  ongoing: Ongoing;
+  limitHour: limitHour;
+  baton: Baton;
+}
+
+export interface Props {
+  navigation: NavigationScreenProp<any, any>;
+}
+
+export interface NavigationLeafRoute<Params> {
+  // ...
+  /**
+   * Params passed to this route when navigating to it,
+   * e.g. `{ car_id: 123 }` in a route that displays a car.
+   */
+  params?: undefined;
+}
+
+class DashboardScreen extends React.Component<Props, State> {
+  static navigationOptions: NavigationScreenConfig<NavigationScreenOptions> = ({ navigation }) => ({
     headerTitle: 'バトンチャレンジ！',
     headerRight: (
       <View style={{ backgroundColor: 'white', marginEnd: 5, borderRadius: 5 }}>
         <Button
           onPress={() => {
-            navigation.navigate('Setting', {
-              updateState: navigation.state.params.setting
-            });
+            if (navigation.state.params) {
+              navigation.navigate('Setting', {
+                updateState: navigation.state.params.setting
+              });
+            }
           }}
           title="設定"
         />
@@ -167,13 +233,13 @@ class DashboardScreen extends React.Component {
     )
   });
 
-  constructor(props) {
+  constructor(props: Props) {
     super(props);
     // androidのタイマー不具合非表示（対策がないため）
     console.ignoredYellowBox = ['Setting a timer'];
   }
 
-  state = {
+  state: State = {
     appState: AppState.currentState,
     uid: '',
     data: [],
@@ -231,7 +297,7 @@ class DashboardScreen extends React.Component {
     // pramasに関数をセット
     const { navigation } = this.props;
     navigation.setParams({
-      setting: (key, value) => this.updateState(key, value)
+      setting: (key: string, value: object) => this.updateState(key, value)
     });
     // アプリのアクティブ、非アクティブをキャッチ
     AppState.addEventListener('change', this.handleAppStateChange);
@@ -246,7 +312,7 @@ class DashboardScreen extends React.Component {
    * 目標達成完了トグルメソッド
    * @param {number} index 目標のインデックス
    */
-  onPressButton(index) {
+  onPressButton(index: number) {
     const { complete, baton } = this.state;
     const { TITLE } = AS_KEY;
     complete[TITLE[index]] = !complete[TITLE[index]];
@@ -265,12 +331,12 @@ class DashboardScreen extends React.Component {
    * 最後の目標達成日から1.5日過ぎてればリセット
    */
   getLocalData() {
-    let { todayTitle } = this.setState;
+    let { todayTitle } = this.state;
     AsyncStorage.getItem('ongoing').then(value => {
       if (value) {
         const ongoing = JSON.parse(value);
-        const saveDate = new Date(ongoing.saveDate);
-        const nowDate = new Date();
+        const saveDate = new Date(ongoing.saveDate).getTime();
+        const nowDate = new Date().getTime();
         const df = nowDate - saveDate;
         if (df / 1000 / 60 / 60 / 24 > 1.5) {
           ongoing.date = 0;
@@ -335,7 +401,7 @@ class DashboardScreen extends React.Component {
   /**
    * AppState.currentStateの変化イベントで呼ばれるメソッド
    */
-  handleAppStateChange = nextAppState => {
+  handleAppStateChange = (nextAppState: AppStateStatus) => {
     const { appState } = this.state;
     if (appState.match(/inactive|background/) && nextAppState === 'active') {
       // console.warn('App has come to the foreground!');
@@ -353,7 +419,9 @@ class DashboardScreen extends React.Component {
       .then(currentUser => {
         // console.warn('firebase');
         const { user } = currentUser;
-        this.setState({ uid: user.uid });
+        if (user) {
+          this.setState({ uid: user.uid });
+        }
       })
       .catch(error => {
         // Handle Errors here.
@@ -372,7 +440,7 @@ class DashboardScreen extends React.Component {
    * @param {string} key stateのキー
    * @param {any} value 格納する値
    */
-  updateState(key, value) {
+  updateState(key: string, value: any) {
     this.setState({ [key]: value });
   }
 
@@ -392,7 +460,7 @@ class DashboardScreen extends React.Component {
             const { navigation } = this.props;
             this.setState({ visibleModal: null });
             navigation.navigate('TodayTasks', {
-              updateState: (key, value) => this.updateState(key, value),
+              updateState: (key: string, value: any) => this.updateState(key, value),
               resetComplete: () => this.resetComplete()
             });
           })}
@@ -410,7 +478,7 @@ class DashboardScreen extends React.Component {
    *
    * @memberof DashboardScreen
    */
-  renderButton = (text, onPress) => (
+  renderButton = (text: string, onPress: () => void) => (
     <TouchableOpacity onPress={onPress}>
       <View style={styles.button}>
         <Text>{text}</Text>
@@ -425,7 +493,7 @@ class DashboardScreen extends React.Component {
    * @returns 各目標表示エレメント
    * @memberof DashboardScreen
    */
-  todayTitleGenerator(index) {
+  todayTitleGenerator(index: number) {
     const { TITLE } = AS_KEY;
     const { inputBox } = styles;
     const { complete } = this.state;
@@ -463,7 +531,7 @@ class DashboardScreen extends React.Component {
    * 完了マークをプッシュ判定し、目標エレメント作成
    * @param {string} key completeのキー
    */
-  toggleCheakMark(key) {
+  toggleCheakMark(key: string) {
     const { todayTitle, complete } = this.state;
     if (complete[key]) {
       return (
@@ -542,19 +610,21 @@ class DashboardScreen extends React.Component {
         this.setState({ data });
       } else {
         db.settings({ timestampsInSnapshots: true });
-        db.collection(`users/${currentUser.uid}/todayTitle`)
-          .add({
-            todayTitle,
-            complete,
-            createOn: new Date(),
-            date
-          })
-          .then(() => {
-            // this.props.navigation.goBack();
-          })
-          .catch(error => {
-            // 登録できなかった時に実行
-          });
+        if (currentUser) {
+          db.collection(`users/${currentUser.uid}/todayTitle`)
+            .add({
+              todayTitle,
+              complete,
+              createOn: new Date(),
+              date
+            })
+            .then(() => {
+              // this.props.navigation.goBack();
+            })
+            .catch(error => {
+              // 登録できなかった時に実行
+            });
+        }
       }
     });
   }
@@ -569,11 +639,8 @@ class DashboardScreen extends React.Component {
     for (let i = 0; i < baton.today; i += 1) {
       elements.push(
         <View key={i} style={{ width: '30%' }}>
-          <Svg width="70" height="70" viewBox="0 0 100 100">
-            <G
-              transform="translate(50 50) scale(0.40 0.40) rotate(0) translate(-50 -50)"
-              fill="#34C8FF"
-            >
+          <Svg width={70} height={70} viewBox="-35 -35 100 100">
+            <G rotate="0" scale="0.4" fill="#34C8FF">
               <Path d="M58.3,31L46.1,18.8c0-4,4.1-8,8-8L66.3,23L58.3,31z M101,82c9.8-1.6,14.7-6.5,16.3-16.3L55.2,3.6  c-9.8,1.6-14.7,6.5-16.3,16.3L101,82z M74.1-13.6c-2.8-1.6-2.8-1.6-4.4,1.2L68-9.6c-1.6,2.9-1.6,2.9,1.2,4.5L72-3.4  c2.8,1.6,2.8,1.6,4.4-1.2l1.6-2.8c1.6-2.8,1.6-2.8-1.2-4.4L74.1-13.6z M91.8,16.3h-3.3c-3.3,0-3.3,0-3.3,3.3v3.3  c0,3.3,0,3.3,3.3,3.3h3.3c3.3,0,3.3,0,3.3-3.3v-3.3C95.1,16.3,95.1,16.3,91.8,16.3z M57.5-18h-3.3C51-18,51-18,51-14.7v3.3  c0,3.3,0,3.3,3.3,3.3h3.3c3.3,0,3.3,0,3.3-3.3v-3.3C60.8-18,60.8-18,57.5-18z M37.7-13.6l-2.9,1.6c-2.8,1.6-2.8,1.6-1.2,4.4l1.6,2.8  c1.6,2.9,1.6,2.9,4.4,1.2l2.9-1.6c2.8-1.6,2.8-1.6,1.2-4.5l-1.6-2.8C40.5-15.2,40.5-15.2,37.7-13.6z M27.2-1  c-2.8-1.6-2.8-1.6-4.4,1.2L21.1,3c-1.6,2.8-1.6,2.8,1.2,4.4l2.8,1.6c2.9,1.6,2.9,1.6,4.5-1.2l1.6-2.9c1.6-2.8,1.6-2.8-1.2-4.4  L27.2-1z M23.2,16.3h-3.3c-3.3,0-3.3,0-3.3,3.3v3.3c0,3.3,0,3.3,3.3,3.3h3.3c3.3,0,3.3,0,3.3-3.3v-3.3  C26.5,16.3,26.5,16.3,23.2,16.3z M57.5,50.6h-3.3c-3.3,0-3.3,0-3.3,3.3v3.3c0,3.3,0,3.3,3.3,3.3h3.3c3.3,0,3.3,0,3.3-3.3v-3.3  C60.8,50.6,60.8,50.6,57.5,50.6z M25.1,33.3l-2.8,1.6c-2.8,1.6-2.8,1.6-1.2,4.4l1.6,2.9c1.6,2.8,1.6,2.8,4.4,1.2l2.8-1.6  c2.9-1.6,2.9-1.6,1.2-4.4l-1.6-2.9C28,31.7,28,31.7,25.1,33.3z M39.7,45.9c-2.8-1.6-2.8-1.6-4.4,1.2l-1.6,2.8  c-1.6,2.8-1.6,2.8,1.2,4.4l2.9,1.6c2.8,1.6,2.8,1.6,4.4-1.2l1.6-2.8c1.6-2.9,1.6-2.9-1.2-4.5L39.7,45.9z M84.6-1l-2.8,1.6  c-2.9,1.6-2.9,1.6-1.2,4.4l1.6,2.9c1.6,2.8,1.6,2.8,4.5,1.2l2.8-1.6c2.8-1.6,2.8-1.6,1.2-4.4L89,0.2C87.4-2.6,87.4-2.6,84.6-1z" />
             </G>
           </Svg>
@@ -618,7 +685,7 @@ class DashboardScreen extends React.Component {
         {this.renderButton('明日の目標を設定', () => {
           const { navigation } = this.props;
           navigation.navigate('TodayTasks', {
-            updateState: (key, value) => this.updateState(key, value),
+            updateState: (key: string, value: any) => this.updateState(key, value),
             resetComplete: () => this.resetComplete()
           });
         })}
@@ -671,7 +738,7 @@ class DashboardScreen extends React.Component {
           const { data } = this.state;
           navigation.navigate('History', {
             data,
-            updateState: (key, value) => this.updateState(key, value)
+            updateState: (key: string, value: any) => this.updateState(key, value)
           });
         }}
       >

@@ -8,6 +8,7 @@ import {
   AsyncStorage,
   ScrollView
 } from 'react-native';
+import { NavigationScreenProp } from 'react-navigation';
 
 const styles = StyleSheet.create({
   container: {
@@ -28,19 +29,6 @@ const styles = StyleSheet.create({
     fontSize: 18
   },
   button: {
-    marginBottom: 10,
-    width: '50%',
-    height: 80,
-    alignSelf: 'center',
-    alignItems: 'center',
-    backgroundColor: '#2196F3'
-  },
-  buttonText: {
-    padding: 5,
-    color: 'white',
-    alignSelf: 'center'
-  },
-  button: {
     backgroundColor: 'lightblue',
     padding: 12,
     margin: 16,
@@ -56,12 +44,27 @@ const styles = StyleSheet.create({
   }
 });
 
-class TodayTasksScreen extends React.Component {
+interface TodayTasksScreenState {
+  todayTitle: todayTitle;
+}
+
+export interface todayTitle {
+  [key: string]: string;
+  todayFirst: string;
+  todaySecond: string;
+  todayThird: string;
+}
+
+export interface HomeScreenProps {
+  navigation: NavigationScreenProp<any, any>;
+}
+
+class TodayTasksScreen extends React.Component<HomeScreenProps, object> {
   static navigationOptions = () => ({
     headerTitle: '明日の自分に挑戦！'
   });
 
-  state = {
+  state: TodayTasksScreenState = {
     todayTitle: {
       todayFirst: '',
       todaySecond: '',
@@ -78,19 +81,17 @@ class TodayTasksScreen extends React.Component {
     navigation.goBack();
   }
 
-  async saveItem(key, value) {
+  async saveItem(key: string, value: string) {
     const { todayTitle } = this.state;
     todayTitle[key] = value;
-    this.setState({
-      todayTitle
-    });
+    this.setState({ todayTitle });
     await AsyncStorage.setItem('todayTitle', JSON.stringify(this.state));
   }
 
   render() {
     return (
       <ScrollView>
-        <View style={styles.container} behavior="padding" enabled>
+        <View style={styles.container}>
           {/* <View style={{ borderWidth: 1, borderColor: 'red' }}> */}
           <View style={styles.inputBox}>
             <TextInput

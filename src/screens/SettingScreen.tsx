@@ -1,7 +1,17 @@
 import React from 'react';
-import { StyleSheet, View, TouchableOpacity, AsyncStorage, ScrollView, Picker } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  TouchableOpacity,
+  AsyncStorage,
+  ScrollView,
+  Picker,
+  NativeSyntheticEvent,
+  TextInputScrollEventData
+} from 'react-native';
 import { ListItem, Divider, Text } from 'react-native-elements';
-import Modal from 'react-native-modal';
+import Modal, { ModalProps } from 'react-native-modal';
+import { NavigationScreenProp } from 'react-navigation';
 
 const styles = StyleSheet.create({
   rivider: {
@@ -39,18 +49,38 @@ function generatorPicker() {
   return elements;
 }
 
-class SettingScreen extends React.Component {
+interface State {
+  limitHour: LimitHour;
+  visibleModal: boolean;
+  scrollOffset: number | undefined;
+}
+
+interface LimitHour {
+  startTime: number | null;
+  endTime: number | null;
+}
+
+export interface Props {
+  navigation: NavigationScreenProp<any, any>;
+}
+
+class SettingScreen extends React.Component<Props, State> {
   static navigationOptions = () => ({
     headerTitle: '設定'
   });
 
-  state = {
+  state: State = {
     limitHour: {
       startTime: null,
       endTime: null
     },
-    visibleModal: false
+    visibleModal: false,
+    scrollOffset: undefined
   };
+
+  constructor(props: Props, private scrollViewRef: ScrollView | null) {
+    super(props);
+  }
 
   componentWillMount() {
     //
@@ -69,7 +99,7 @@ class SettingScreen extends React.Component {
 
   // react-native-modal/Example.js at master · react-native-community/react-native-modal - https://goo.gl/DuzvHQ
   // 上記参考コード、他も（モーダルスクロール）
-  renderButton = (text, onPress) => (
+  renderButton = (text: string, onPress: () => void) => (
     <TouchableOpacity onPress={onPress}>
       <View style={styles.button}>
         <Text>{text}</Text>
@@ -77,13 +107,13 @@ class SettingScreen extends React.Component {
     </TouchableOpacity>
   );
 
-  handleOnScroll = event => {
+  handleOnScroll = (event: NativeSyntheticEvent<TextInputScrollEventData>) => {
     this.setState({
       scrollOffset: event.nativeEvent.contentOffset.y
     });
   };
 
-  handleScrollTo = p => {
+  handleScrollTo = (p: { animated: boolean; y: number }) => {
     if (this.scrollViewRef) {
       this.scrollViewRef.scrollTo(p);
     }
@@ -93,7 +123,7 @@ class SettingScreen extends React.Component {
    * Pickerの値が変わった時、limitHourをアップデート
    * @param {*} limitHour
    */
-  update(limitHour) {
+  update(limitHour: LimitHour) {
     this.setState({ limitHour });
     const { navigation } = this.props;
     navigation.state.params.updateState('limitHour', limitHour);
@@ -106,6 +136,7 @@ class SettingScreen extends React.Component {
     const timeText = `集計時間設定    ${startTime}時 から ${endTime}時まで`;
     return (
       <View>
+        {/* renderButtonを使う */}
         <View>
           <TouchableOpacity
             onPress={() => {
@@ -117,7 +148,7 @@ class SettingScreen extends React.Component {
         </View>
         <Divider style={{ backgroundColor: '#265366' }} />
         <View>
-          <ListItem roundAvatar title={timeText} />
+          <ListItem title={timeText} />
         </View>
         <View style={{ flex: 1, flexDirection: 'row' }}>
           <View style={{ flex: 1 }}>
@@ -159,15 +190,9 @@ class SettingScreen extends React.Component {
               scrollEventThrottle={16}
               style={{ margin: 10 }}
             >
-              <TouchableOpacity
-                onPress={() => {
-                  this.setState({ visibleModal: false });
-                }}
-              >
-                <View style={styles.button}>
-                  <Text>閉じる</Text>
-                </View>
-              </TouchableOpacity>
+              {this.renderButton('閉じる', () => {
+                this.setState({ visibleModal: false });
+              })}
               <Text style={{ fontSize: 25, fontWeight: 'bold', marginBottom: 5 }}>
                 プライバシーポリシー
               </Text>
@@ -220,15 +245,9 @@ class SettingScreen extends React.Component {
                 までご連絡ください。
               </Text>
               <Divider style={styles.rivider} />
-              <TouchableOpacity
-                onPress={() => {
-                  this.setState({ visibleModal: false });
-                }}
-              >
-                <View style={styles.button}>
-                  <Text>閉じる</Text>
-                </View>
-              </TouchableOpacity>
+              {this.renderButton('閉じる', () => {
+                this.setState({ visibleModal: false });
+              })}
             </ScrollView>
           </View>
         </Modal>

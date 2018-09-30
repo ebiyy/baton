@@ -1,6 +1,6 @@
 import firebase from 'firebase';
 import { createStackNavigator } from 'react-navigation';
-import { FIREBASE } from './env.json';
+import { FIREBASE } from './env';
 import TodayTasksScreen from './src/screens/TodayTasksScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import SettingScreen from './src/screens/SettingScreen';
