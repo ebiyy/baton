@@ -1,7 +1,16 @@
 プレリリース完了！
 [リリース情報はこちら](https://mankutsu.com/baton-1077)　　
 
-## package  
+## main package  
+expo:27.0.1
+react": 16.3.1
+react-native": 0.55.2
+firebase": 5.4.1
+typescript": 3.1.1
+
+
+
+
 
 
 This project was bootstrapped with [Create React Native App](https://github.com/react-community/create-react-native-app).
